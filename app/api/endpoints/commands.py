@@ -13,15 +13,19 @@ router = APIRouter(
 @router.get("/{laptop_identifier}", response_model=schemas.ClientCommandResponse)
 def get_client_command(laptop_identifier: str, db: Session = Depends(get_db)):
     db_laptop = crud.get_laptop_by_identifier(db, identifier=laptop_identifier)
-    if not db_laptop:
+    if not db_laptop: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht registriert oder Kennung unbekannt.")
 
     crud.update_laptop_contact(db=db, laptop_identifier=laptop_identifier)
 
     command_to_send = schemas.ClientCommandResponse()
     
-    if db_laptop.pending_command is not None:
+    if db_laptop.pending_command is not None: 
         command_to_send.command = db_laptop.pending_command  # type: ignore[assignment]
+        # Den gespeicherten pending_scan_type aus dem Laptop-Modell holen
+        if db_laptop.pending_scan_type: # Prüfen, ob ein Wert vorhanden ist # type: ignore[assignment]
+            command_to_send.scan_type = db_laptop.pending_scan_type # type: ignore[assignment]
+            
     return command_to_send
 
 class TriggerScanPayload(BaseModel):

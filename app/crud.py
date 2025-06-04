@@ -51,10 +51,11 @@ def update_laptop_command(db: Session, laptop_identifier: str, command: str | No
     if db_laptop:
         db_laptop.pending_command = command             # type: ignore[assignment]
         if command: 
-            db_laptop.command_issue_time = datetime.now(timezone.utc) # type: ignore[assignment] # Explizit UTC
-            # ... (Rest bleibt gleich)
-        else: 
+            db_laptop.command_issue_time = datetime.now(timezone.utc) # type: ignore[assignment]
+            db_laptop.pending_scan_type = scan_type     # type: ignore[assignment] # HIER speichern wir den scan_type
+        else: # Befehl wird gelöscht
             db_laptop.command_issue_time = None         # type: ignore[assignment]
+            db_laptop.pending_scan_type = None          # type: ignore[assignment] # Auch den scan_type löschen
         db.commit()
         db.refresh(db_laptop)
     return db_laptop

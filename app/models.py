@@ -19,12 +19,13 @@ class Laptop(Base):
     last_scan_result_message = Column(Text, nullable=True)
     last_scan_threats_found = Column(Boolean, nullable=True)
 
-    pending_command = Column(String, nullable=True) # z.B. "START_FULL_SCAN"
+    pending_command = Column(String, nullable=True)
+    pending_scan_type = Column(String, nullable=True)
     command_issue_time = Column(DateTime(timezone=True), nullable=True)
 
     # Beziehung zu ScanReports
     # 'back_populates' muss auf den Namen der Beziehung in ScanReport zeigen
-    scan_reports = relationship("ScanReport", back_populates="laptop")
+    scan_reports = relationship("ScanReport", back_populates="laptop", cascade="all, delete-orphan")
 
 
 class ScanReport(Base):
