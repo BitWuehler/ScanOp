@@ -1,24 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+# app/api/endpoints/laptops.py
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, cast # cast ggf. für andere Stellen, hier nicht direkt nötig
 
 from app import crud, models, schemas
-from app.database import get_db # Unsere Dependency für die DB-Session
+from app.database import get_db 
 
 router = APIRouter(
     prefix="/laptops",
-    tags=["Laptops"], # Für die API-Dokumentation
+    tags=["Laptops"], 
 )
-
-# API-Key Abhängigkeit (vereinfacht für den Anfang)
-# In einer echten Anwendung sollte dies sicherer sein und der Key nicht hardcoded werden.
-# Wir definieren hier noch keinen API Key, fügen ihn aber später hinzu.
-# Fürs Erste lassen wir die Endpunkte ohne expliziten API-Key-Schutz,
-# um die grundlegende Funktionalität zu testen.
 
 @router.post("/", response_model=schemas.Laptop, status_code=status.HTTP_201_CREATED)
 def create_new_laptop(laptop: schemas.LaptopCreate, db: Session = Depends(get_db)):
-    # Prüfen, ob Hostname oder Alias bereits existieren
     db_laptop_hostname = crud.get_laptop_by_hostname(db, hostname=laptop.hostname)
     if db_laptop_hostname:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Laptop mit Hostname '{laptop.hostname}' existiert bereits.")
@@ -35,11 +29,17 @@ def read_laptops_list(skip: int = 0, limit: int = 100, db: Session = Depends(get
 
 @router.get("/{laptop_identifier}", response_model=schemas.Laptop)
 def read_laptop_details(laptop_identifier: str, db: Session = Depends(get_db)):
+    # Die Funktion get_laptop_by_identifier erwartet 'identifier'
     db_laptop = crud.get_laptop_by_identifier(db, identifier=laptop_identifier)
     if db_laptop is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden")
     return db_laptop
 
-# Weitere Endpunkte für Update und Delete könnten hier folgen,
-# sind aber für die Client-Kommunikation vielleicht nicht primär nötig.
-# Ein Update-Endpunkt für den Admin (z.B. Alias ändern) wäre aber sinnvoll für das Webinterface.
+@router.delete("/{laptop_identifier}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_laptop(laptop_identifier: str, db: Session = Depends(get_db)):
+    """Löscht einen Laptop und alle zugehörigen Scan-Berichte."""
+    # KORREKTUR HIER: Parametername angepasst
+    deleted_laptop = crud.delete_laptop_by_identifier(db=db, laptop_identifier=laptop_identifier)
+    if deleted_laptop is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

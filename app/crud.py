@@ -26,20 +26,32 @@ def get_laptops(db: Session, skip: int = 0, limit: int = 100) -> list[models.Lap
     return db.query(models.Laptop).offset(skip).limit(limit).all()
 
 def create_laptop(db: Session, laptop: schemas.LaptopCreate) -> models.Laptop:
-    now_utc = datetime.now(timezone.utc) # Explizit UTC
+    now_utc = datetime.now(timezone.utc)
     db_laptop = models.Laptop(
         hostname=laptop.hostname,
         alias_name=laptop.alias_name,
+        # first_seen wird durch server_default gesetzt
     )
     db.add(db_laptop)
     db.commit()
     db.refresh(db_laptop)
     return db_laptop
 
+def delete_laptop_by_identifier(db: Session, laptop_identifier: str) -> models.Laptop | None:
+    """Löscht einen Laptop anhand seines Identifiers (Hostname oder Alias)."""
+    db_laptop = get_laptop_by_identifier(db, identifier=laptop_identifier)
+    if db_laptop:
+        # Bevor der Laptop gelöscht wird, könnten abhängige ScanReports auch gelöscht werden,
+        # wenn 'cascade="all, delete-orphan"' in der Laptop-Modellbeziehung gesetzt ist (was es ist).
+        db.delete(db_laptop)
+        db.commit()
+    return db_laptop # Gibt das gelöschte Objekt zurück (oder None, falls nicht gefunden)
+
+
 def update_laptop_contact(db: Session, laptop_identifier: str) -> models.Laptop | None:
     db_laptop = get_laptop_by_identifier(db=db, identifier=laptop_identifier)
     if db_laptop:
-        db_laptop.last_api_contact = datetime.now(timezone.utc)  # type: ignore[assignment] # Explizit UTC
+        db_laptop.last_api_contact = datetime.now(timezone.utc) # type: ignore[assignment]
         db.commit()
         db.refresh(db_laptop)
     return db_laptop
@@ -47,20 +59,20 @@ def update_laptop_contact(db: Session, laptop_identifier: str) -> models.Laptop 
 def update_laptop_command(db: Session, laptop_identifier: str, command: str | None, scan_type: str | None = None) -> models.Laptop | None:
     db_laptop = get_laptop_by_identifier(db=db, identifier=laptop_identifier)
     if db_laptop:
-        db_laptop.pending_command = command             # type: ignore[assignment]
+        db_laptop.pending_command = command # type: ignore[assignment]
         if command: 
             db_laptop.command_issue_time = datetime.now(timezone.utc) # type: ignore[assignment]
-            db_laptop.pending_scan_type = scan_type     # type: ignore[assignment] # HIER speichern wir den scan_type
-        else: # Befehl wird gelöscht
-            db_laptop.command_issue_time = None         # type: ignore[assignment]
-            db_laptop.pending_scan_type = None          # type: ignore[assignment] # Auch den scan_type löschen
+            db_laptop.pending_scan_type = scan_type # type: ignore[assignment]
+        else: # Befehl wird gelöscht/abgebrochen
+            db_laptop.command_issue_time = None # type: ignore[assignment]
+            db_laptop.pending_scan_type = None # type: ignore[assignment]
         db.commit()
         db.refresh(db_laptop)
     return db_laptop
 
 def clear_laptop_command(db: Session, laptop_identifier: str) -> models.Laptop | None:
-    """Löscht einen pending_command von einem Laptop."""
-    return update_laptop_command(db=db, laptop_identifier=laptop_identifier, command=None)
+    """Löscht einen pending_command und pending_scan_type von einem Laptop."""
+    return update_laptop_command(db=db, laptop_identifier=laptop_identifier, command=None, scan_type=None)
 
 
 # === ScanReport CRUD Funktionen ===
