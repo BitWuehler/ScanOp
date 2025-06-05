@@ -19,6 +19,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function formatUtcToLocalDateTime(utcDateString) {
+        if (!utcDateString || utcDateString === 'N/A') {
+            return 'N/A';
+        }
+        try {
+            const date = new Date(utcDateString); // JavaScript Date interpretiert ISO 8601 (wie "o" Format) als UTC
+            if (isNaN(date.getTime())) { // Ungültiges Datum
+                return 'Ungült. Datum';
+            }
+            // Optionen für die Formatierung
+            const options = {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                // timeZoneName: 'short' // Optional: Zeitzonen-Kürzel anzeigen
+            };
+            return date.toLocaleString(undefined, options); // undefined für lokale Sprache/Formatierung
+        } catch (e) {
+            console.error("Error formatting date:", utcDateString, e);
+            return utcDateString; // Fallback auf Originalstring
+        }
+    }
+
+    function convertTableDateTimes() {
+        // Für die Laptop-Übersichtstabelle
+        const laptopTableRows = document.querySelectorAll('#laptop-row-template, table.sortable-theme-bootstrap tbody tr'); // Auch Template-Zeile anpassen, falls vorhanden
+
+        laptopTableRows.forEach(row => {
+            // Spalte "Zuletzt gesehen (API)" - Annahme: ist die 4. <td> (Index 3), wenn Scan Status die 4. Spalte ist
+            // Besser: Mit spezifischen Klassen arbeiten
+            const lastApiContactCell = row.cells[4]; // Index anpassen, falls Spaltenreihenfolge anders
+            if (lastApiContactCell && lastApiContactCell.textContent !== 'N/A') {
+                lastApiContactCell.textContent = formatUtcToLocalDateTime(lastApiContactCell.dataset.utcTime || lastApiContactCell.textContent);
+                lastApiContactCell.title = `UTC: ${lastApiContactCell.dataset.utcTime || 'unbekannt'}`;
+            }
+
+            // Spalte "Letzter Scan" - Annahme: ist die 5. <td> (Index 4)
+            const lastScanTimeCell = row.cells[5]; // Index anpassen
+            if (lastScanTimeCell && lastScanTimeCell.textContent !== 'N/A') {
+                lastScanTimeCell.textContent = formatUtcToLocalDateTime(lastScanTimeCell.dataset.utcTime || lastScanTimeCell.textContent);
+                 lastScanTimeCell.title = `UTC: ${lastScanTimeCell.dataset.utcTime || 'unbekannt'}`;
+            }
+        });
+
+        // Hier könnten später auch Datumsfelder auf der Berichtsseite konvertiert werden
+        document.querySelectorAll('.convert-utc-date').forEach(element => {
+            if (element.textContent && element.textContent !== 'N/A') {
+                const originalUtc = element.dataset.utcTime || element.textContent;
+                element.textContent = formatUtcToLocalDateTime(originalUtc);
+                element.title = `UTC: ${originalUtc}`;
+            }
+        });
+    }
+    
+    // Konvertierung beim Laden der Seite aufrufen
+    if (document.querySelector('table.sortable-theme-bootstrap') || document.querySelector('.daily-report-table')) {
+        convertTableDateTimes();
+    }
+
     function updatePendingCommandInUI(laptopAlias, command, scanType) {
         const row = document.getElementById(`laptop-row-${laptopAlias}`);
         if (row) {
@@ -164,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // Auto-Refresh Polling (bleibt wie zuvor)
+    // Auto-Refresh Polling
     let lastKnownUpdateTime = null; 
     const POLLING_INTERVAL = 30000; 
     let pollingTimeoutId = null; 
@@ -199,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pollingTimeoutId = setTimeout(checkForUpdates, POLLING_INTERVAL);
     }
 
-    if (document.querySelector('table[data-sortable]')) {
-       setTimeout(checkForUpdates, 5000); // Erster Check etwas verzögert
+    if (document.querySelector('table[data-sortable]')) { // Nur auf Laptop-Übersicht pollen
+       scheduleNextCheck();
     }
 });

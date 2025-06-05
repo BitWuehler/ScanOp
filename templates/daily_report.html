@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - ScanOp</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <!-- Kein Sortable hier, es sei denn, es wird explizit gewünscht -->
+</head>
+<body>
+    <header>
+        <h1>ScanOp - {{ title }}</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('read_root_html') }}">Startseite</a></li>
+                <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
+                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht (Heute)</a></li>
+            </ul>
+        </nav>
+        <div style="margin-top: 10px;">
+            <form method="get" action="{{ url_for('web_daily_report') }}">
+                <label for="report_date_str">Datum für Bericht (YYYY-MM-DD):</label>
+                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date }}" placeholder="YYYY-MM-DD">
+                <button type="submit">Bericht anzeigen</button>
+            </form>
+        </div>
+    </header>
+    <main>
+        <h2>Laptop-Status am {{ report_date }}</h2>
+        
+        <div style="margin-bottom: 20px; margin-top: 20px;">
+            <button id="export-csv-btn">Als CSV exportieren</button>
+            <button id="export-pdf-btn">Als PDF exportieren</button>
+        </div>
+
+        {% if laptops_report_data %}
+        <table id="daily-report-table" class="daily-report-table"> <!-- ID für JS-Zugriff -->
+            <thead>
+                <tr>
+                    <th>Alias</th>
+                    <th>Hostname</th>
+                    <th>Letzter Scan (Lokal)</th>
+                    <th>Scan Ergebnis</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for laptop in laptops_report_data %}
+                <tr class="laptop-report-row">
+                    <td>{{ laptop.alias_name }}</td>
+                    <td>{{ laptop.hostname }}</td>
+                    <td data-utc-time="{{ laptop.last_scan_time_utc }}" class="date-cell">
+                        {{ laptop.last_scan_time_display }}
+                    </td>
+                    <td>
+                        {% if laptop.last_scan_result %}
+                            <span title="{{ laptop.last_scan_result }}">{{ laptop.last_scan_result[:70] }}{% if laptop.last_scan_result|length > 70 %}...{% endif %}</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td class="{{ laptop.status_color_class }}">
+                        {{ laptop.status_text }}
+                        {% if laptop.threats_found is true %} (Bedrohungen!) {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Keine Daten für diesen Bericht verfügbar.</p>
+        {% endif %}
+    </main>
+    <footer>
+        <p>© 2024 ScanOp</p>
+    </footer>
+    <!-- jsPDF und jsPDF-AutoTable (für PDF-Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="{{ url_for('static', path='/app.js') }}"></script>
+</body>
+</html>
