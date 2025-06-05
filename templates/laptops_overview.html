@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - ScanOp</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <!-- Für die Sortierung (siehe unten) -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/sortable-theme-bootstrap.css') }}" />
+</head>
+<body>
+    <header>
+        <h1>ScanOp - {{ title }}</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('read_root_html') }}">Startseite</a></li>
+                <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>Registrierte Laptops</h2>
+        <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        {% if laptops_list %} <!-- Umbenannt von laptops_data -->
+        <table class="sortable-theme-bootstrap" data-sortable> <!-- Klassen für Sortierung -->
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Hostname</th>
+                    <th>Alias</th>
+                    <th data-sorted-direction="descending">Scan Status</th> <!-- Neue Spalte, Standard-Sortierung absteigend (Rot oben) -->
+                    <th>Zuletzt gesehen (API)</th>
+                    <th>Letzter Scan</th>
+                    <th>Scan Typ</th>
+                    <th>Scan Ergebnis</th>
+                    <th>Bedrohungen?</th>
+                    <th>Akt. Befehl</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in laptops_list %} <!-- Umbenannt von laptops_data -->
+                {% set laptop = item.db_data %} <!-- Zugriff auf das ursprüngliche Laptop-Objekt -->
+                <tr id="laptop-row-{{ laptop.alias_name }}">
+                    <td>{{ laptop.id }}</td>
+                    <td>{{ laptop.hostname }}</td>
+                    <td>{{ laptop.alias_name }}</td>
+                    <!-- Scan Status Zelle -->
+                    <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}"> <!-- data-value für Sortierung -->
+                        {{ item.scan_status.text }}
+                    </td>
+                    <td>{{ laptop.last_api_contact.strftime('%Y-%m-%d %H:%M:%S %Z') if laptop.last_api_contact else 'N/A' }}</td>
+                    <td>{{ laptop.last_scan_time.strftime('%Y-%m-%d %H:%M:%S %Z') if laptop.last_scan_time else 'N/A' }}</td>
+                    <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
+                    <td>
+                        {% if laptop.last_scan_result_message %}
+                            <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:50] }}{% if laptop.last_scan_result_message|length > 50 %}...{% endif %}</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if laptop.last_scan_threats_found is not none %}
+                            {{ "Ja" if laptop.last_scan_threats_found else "Nein" }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td class="pending-command-cell">
+                        {{ laptop.pending_command if laptop.pending_command else 'Kein' }}
+                        {% if laptop.pending_command and laptop.pending_scan_type %}
+                            ({{ laptop.pending_scan_type }})
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}" data-scan-type="QuickScan">QuickScan</button>
+                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}" data-scan-type="FullScan">FullScan</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Keine Laptops registriert.</p>
+        {% endif %}
+
+        <hr style="margin-top: 30px; margin-bottom: 20px;">
+        <h3>Scan für alle Laptops starten</h3>
+        <div>
+            <button class="scan-button" data-laptop-alias="all" data-scan-type="QuickScan">QuickScan für ALLE</button>
+            <button class="scan-button" data-laptop-alias="all" data-scan-type="FullScan">FullScan für ALLE</button>
+        </div>
+    </main>
+    <footer>
+        <p>© 2025 ScanOp - Jonas Thiebes</p>
+    </footer>
+
+    <script src="{{ url_for('static', path='/sortable.min.js') }}"></script> <!-- Für Sortierung -->
+    <script src="{{ url_for('static', path='/app.js') }}"></script>
+</body>
+</html>
