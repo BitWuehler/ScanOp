@@ -30,8 +30,6 @@ def create_laptop(db: Session, laptop: schemas.LaptopCreate) -> models.Laptop:
     db_laptop = models.Laptop(
         hostname=laptop.hostname,
         alias_name=laptop.alias_name,
-        first_seen=now_utc,        # Setzt UTC
-        last_api_contact=now_utc   # Setzt UTC (initial)
     )
     db.add(db_laptop)
     db.commit()
