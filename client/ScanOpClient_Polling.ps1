@@ -4,331 +4,428 @@
 .DESCRIPTION
     Dieses Skript liest eine Konfiguration, pollt periodisch einen Server-API-Endpunkt
     und führt basierend auf den empfangenen Befehlen Aktionen aus (z.B. Starten eines Virenscans
-    und Melden des Ergebnisses mit interpretierten Defender-Statuscodes).
+    und Melden des Ergebnisses mit interpretierten Defender-Statuscodes, inklusive "Zwischendurch"-Funde).
     BENÖTIGT ADMINISTRATORBERECHTIGUNGEN für Start-MpScan und Get-WinEvent.
 #>
 
 # --- Konfiguration und Initialisierung ---
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ConfigFilePath = Join-Path -Path $ScriptDir -ChildPath "client_config.json"
+$LastReportTimeFilePath = Join-Path -Path $ScriptDir -ChildPath "last_report_time.txt"
 
 Write-Host "Lese Konfiguration von: $ConfigFilePath"
 
 if (-not (Test-Path $ConfigFilePath)) {
-    Write-Error "Konfigurationsdatei nicht gefunden: $ConfigFilePath"
-    exit 1
+    Write-Error "Konfigurationsdatei nicht gefunden: $ConfigFilePath"; exit 1
 }
-
 try {
     $Config = Get-Content -Path $ConfigFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
-}
-catch {
-    Write-Error "Fehler beim Lesen oder Parsen der Konfigurationsdatei '$ConfigFilePath': $($_.Exception.Message)"
-    exit 1
+} catch {
+    Write-Error "Fehler beim Lesen oder Parsen der Konfigurationsdatei '$ConfigFilePath': $($_.Exception.Message)"; exit 1
 }
 
 $AliasName = $Config.AliasName
 $ServerBaseUrl = $Config.ServerBaseUrl
-$ApiKey = $Config.ApiKey
+$ApiKey = $Config.ApiKey 
 $PollingIntervalSeconds = $Config.PollingIntervalSeconds
+$InterimCheckIntervalMinutes = $Config.InterimCheckIntervalMinutes 
 
 if (-not $AliasName -or -not $ServerBaseUrl -or -not $PollingIntervalSeconds) {
-    Write-Error "Unvollständige Konfiguration in '$ConfigFilePath'. AliasName, ServerBaseUrl und PollingIntervalSeconds sind erforderlich."
-    exit 1
+    Write-Error "Unvollständige Konfiguration: AliasName, ServerBaseUrl, PollingIntervalSeconds sind erforderlich."; exit 1
+}
+if (-not $InterimCheckIntervalMinutes) {
+    Write-Warning "Kein 'InterimCheckIntervalMinutes' in Config gefunden. Setze auf 60 Minuten."
+    $InterimCheckIntervalMinutes = 60
 }
 
-Write-Host "Client gestartet für Alias: $AliasName"
-Write-Host "Server URL: $ServerBaseUrl"
-Write-Host "Polling Intervall: $PollingIntervalSeconds Sekunden"
+$Global:LastSuccessfulReportTimeUTC = $null
+if (Test-Path $LastReportTimeFilePath) {
+    try {
+        $loadedTimeRaw = Get-Content -Path $LastReportTimeFilePath -Raw -ErrorAction Stop
+        $loadedTimeJson = $loadedTimeRaw | ConvertFrom-Json -ErrorAction Stop
+        if ($loadedTimeJson -is [string]) {
+            try { $Global:LastSuccessfulReportTimeUTC = [datetime]::ParseExact($loadedTimeJson, "o", $null).ToUniversalTime() }
+            catch { Write-Warning "Konnte String '$loadedTimeJson' nicht mit ParseExact('o') parsen."; try { $Global:LastSuccessfulReportTimeUTC = ([datetime]$loadedTimeJson).ToUniversalTime() } catch {}}
+        }
+        if ($Global:LastSuccessfulReportTimeUTC) { Write-Host "Letzte erfolgreiche Report-Zeit geladen: $($Global:LastSuccessfulReportTimeUTC.ToLocalTime()) ($($Global:LastSuccessfulReportTimeUTC.ToString("o")) UTC)"}
+        else { Write-Warning "Konnte Zeitstempel nicht korrekt als DateTime parsen aus '$LastReportTimeFilePath' (Inhalt: '$loadedTimeRaw')." }
+    } catch { Write-Warning "Fehler beim Laden/Parsen von '$LastReportTimeFilePath': $($_.Exception.Message)."; $Global:LastSuccessfulReportTimeUTC = $null }
+} 
+if ($null -eq $Global:LastSuccessfulReportTimeUTC) {
+    Write-Host "Keine gültige '$LastReportTimeFilePath' gefunden/geladen. Setze auf Startdatum für Event-Suche."
+    $Global:LastSuccessfulReportTimeUTC = (Get-Date "1970-01-01").ToUniversalTime() 
+}
+$Global:LastInterimCheckTimeUTC = (Get-Date).ToUniversalTime() 
 
-$CommandUrl = "$ServerBaseUrl/clientcommands/$AliasName"
-$ReportUrl = "$ServerBaseUrl/scanreports/"
+Write-Host "Client gestartet für Alias: $AliasName"; Write-Host "Server URL: $ServerBaseUrl"
+Write-Host "Polling Intervall: $PollingIntervalSeconds Sekunden"; Write-Host "Intervall für Zwischen-Event-Prüfung: $InterimCheckIntervalMinutes Minuten"
 
-# --- Hilfsfunktion zum Senden von Scan-Berichten (angepasst für PS 5.1 Kompatibilität) ---
+$CommandUrl = "$ServerBaseUrl/clientcommands/$AliasName"; $ReportUrl = "$ServerBaseUrl/scanreports/"
+
+# --- Hilfsfunktionen ---
 function Send-ScanReport {
     param(
-        [Parameter(Mandatory=$true)]
-        [string]$ScanTime,
-        [Parameter(Mandatory=$true)]
-        [string]$ScanType,
-        [Parameter(Mandatory=$true)]
-        [string]$ScanResultMessage,
-        [Parameter(Mandatory=$true)]
-        [bool]$ThreatsFound,
+        [Parameter(Mandatory=$true)][string]$ScanTime,
+        [Parameter(Mandatory=$true)][string]$ScanType,
+        [Parameter(Mandatory=$true)][string]$ScanResultMessage,
+        [Parameter(Mandatory=$true)][bool]$ThreatsFound,
         [string]$ThreatDetails = $null
     )
-
     Write-Host "DEBUG: Betrete Send-ScanReport Funktion."
     Write-Host "Sende Scan-Bericht an: $ReportUrl"
+    if ([string]::IsNullOrWhiteSpace($ScanTime)) { $ScanTime = (Get-Date "1970-01-01").ToUniversalTime().ToString("o") }
+    if ([string]::IsNullOrWhiteSpace($ScanType)) { $ScanType = "Unbekannt" }
+    if ([string]::IsNullOrWhiteSpace($ScanResultMessage)) { $ScanResultMessage = "Keine Meldung" }
 
-    if ([string]::IsNullOrWhiteSpace($ScanTime)) { Write-Warning "ScanTime leer! Fallback."; $ScanTime = (Get-Date -Date "1970-01-01").ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
-    if ([string]::IsNullOrWhiteSpace($ScanType)) { Write-Warning "ScanType leer! Fallback."; $ScanType = "Unbekannt" }
-    if ([string]::IsNullOrWhiteSpace($ScanResultMessage)) { Write-Warning "ScanResultMessage leer! Fallback."; $ScanResultMessage = "Keine Meldung" }
+    $CleanResultMessage = $ScanResultMessage -replace '[\x00-\x1F\x7F]', '' 
+    $CleanThreatDetails = if ($ThreatDetails) { $ThreatDetails -replace '[\x00-\x1F\x7F]', '' } else { $null }
 
     $payloadContent = @{
-        laptop_identifier = $AliasName
-        client_scan_time = $ScanTime
-        scan_type = $ScanType
-        scan_result_message = $ScanResultMessage
-        threats_found = $ThreatsFound
+        laptop_identifier = $AliasName; client_scan_time = $ScanTime; scan_type = $ScanType;
+        scan_result_message = $CleanResultMessage; threats_found = $ThreatsFound
     }
-    if ($null -ne $ThreatDetails -and (-not [string]::IsNullOrWhiteSpace($ThreatDetails))) { $payloadContent.threat_details = $ThreatDetails }
+    if ($null -ne $CleanThreatDetails -and (-not [string]::IsNullOrWhiteSpace($CleanThreatDetails))) { $payloadContent.threat_details = $CleanThreatDetails }
     else { $payloadContent.threat_details = $null }
-
+    
     $payloadBodyJson = $payloadContent | ConvertTo-Json -Depth 5 -Compress
-    Write-Host "DEBUG: Erstellter Payload für Report: $payloadBodyJson"
+    Write-Host "DEBUG: Erstellter Payload für Report (Länge: $($payloadBodyJson.Length)): $payloadBodyJson" 
 
-    $requestHeaders = @{ "Content-Type" = "application/json" }
-    # if ($ApiKey) { $requestHeaders["X-API-Key"] = $ApiKey } # TODO: EINKOMMENTIEREN
+    $utf8Encoding = [System.Text.Encoding]::UTF8
+    $payloadBytes = $utf8Encoding.GetBytes($payloadBodyJson)
 
-    $ErrorActionPreferenceBackup = $ErrorActionPreference
-    $ErrorActionPreference = "Stop" # Stellt sicher, dass Invoke-RestMethod bei HTTP-Fehlern eine Exception wirft
-
-    $responseVariable = $null
-    $actualHttpStatusCode = 0 # Für den tatsächlichen HTTP-Statuscode
-
+    $requestHeaders = @{ "Content-Type" = "application/json; charset=utf-8" }
+    # if ($ApiKey) { $requestHeaders["X-API-Key"] = $ApiKey } 
+    
+    $ErrorActionPreferenceBackup = $ErrorActionPreference; $ErrorActionPreference = "Stop"
+    $responseVariable = $null; $actualHttpStatusCode = 0
     try {
-        Write-Host "DEBUG: Vor Invoke-RestMethod für Report-Senden (ohne -StatusCodeVariable)..."
-        # -StatusCodeVariable und -ErrorVariable entfernt für PS 5.1 Kompatibilität
-        $responseVariable = Invoke-RestMethod -Uri $ReportUrl -Method Post -Body $payloadBodyJson -Headers $requestHeaders -TimeoutSec 60
-
-        # Wenn wir hier ankommen, hat Invoke-RestMethod KEINE Exception geworfen.
-        # Das bedeutet bei einem POST typischerweise einen 2xx Status (z.B. 200, 201, 204).
-        $actualHttpStatusCode = 201 # Annahme für einen erfolgreichen POST, der hier landet (FastAPI gibt 201 zurück)
-        Write-Host "DEBUG: Nach Invoke-RestMethod (innerhalb try, keine Exception). Angenommener Status: $actualHttpStatusCode"
-        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan-Bericht erfolgreich an den Server gesendet. (Status: $actualHttpStatusCode angenommen)"
-        if ($responseVariable) {
-             Write-Host "Server Antwort (Erfolg): $($responseVariable | ConvertTo-Json -Depth 3 -Compress)"
-        }
-    }
-    catch {
-        $CaughtException = $_
-        Write-Host "DEBUG CATCH-BLOCK Send-ScanReport: Exception abgefangen!"
-
-        Write-Error "FEHLER DETAILS: Exception beim Senden des Scan-Reports!"
+        Write-Host "DEBUG: Vor Invoke-RestMethod für Report-Senden (mit UTF-8 Bytes)..."
+        $responseVariable = Invoke-RestMethod -Uri $ReportUrl -Method Post -Body $payloadBytes -Headers $requestHeaders -TimeoutSec 120 
+        $actualHttpStatusCode = 201 
+        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan-Bericht erfolgreich an Server gesendet. (Status: $actualHttpStatusCode angenommen)"
+        if ($responseVariable) { Write-Host "Server Antwort (Erfolg): $($responseVariable | ConvertTo-Json -Depth 3 -Compress)" }
+        
+        $Global:LastSuccessfulReportTimeUTC = (Get-Date).ToUniversalTime()
+        try {
+            ($Global:LastSuccessfulReportTimeUTC.ToString("o") | ConvertTo-Json -Compress) | Set-Content -Path $LastReportTimeFilePath -Force -Encoding UTF8
+            Write-Host "Letzte erfolgreiche Report-Zeit gespeichert: $($Global:LastSuccessfulReportTimeUTC.ToLocalTime()) ($($Global:LastSuccessfulReportTimeUTC.ToString("o")) UTC)"
+        } catch { Write-Warning "Fehler beim Speichern von '$LastReportTimeFilePath': $($_.Exception.Message)" }
+    } catch {
+        $CaughtException = $_; Write-Error "FEHLER Send-ScanReport: $($CaughtException.ToString())" 
         if ($CaughtException.Exception) {
-            Write-Error "Exception Typ: $($CaughtException.Exception.GetType().FullName)"
-            Write-Error "Exception Nachricht: $($CaughtException.Exception.Message)"
-            if ($CaughtException.Exception -is [System.Net.WebException]) {
-                $webEx = $CaughtException.Exception
-                Write-Error "Status der WebException: $($webEx.Status)"
-                if ($null -ne $webEx.Response) {
-                    $httpResponse = $webEx.Response
-                    $actualHttpStatusCode = [int]$httpResponse.StatusCode
-                    Write-Error "HTTP Status Code der Response: $actualHttpStatusCode"
-                    $errorBodyContent = "<Fehler beim Lesen des Body>"
-                    try {
-                        $responseStream = $httpResponse.GetResponseStream()
-                        if ($responseStream.CanRead) { $streamReader = New-Object System.IO.StreamReader($responseStream); $errorBodyContent = $streamReader.ReadToEnd(); $streamReader.Close() }
-                        else { $errorBodyContent = "<Antwort-Stream nicht lesbar>" }
-                        $responseStream.Close()
-                    } catch { $errorBodyContent = "<Exception beim Lesen des Fehler-Bodys: $($_.Exception.Message)>" }
-                    Write-Error "Fehlerhafter Antwort-Body vom Server (aus WebEx): $errorBodyContent"
-                } else { Write-Warning "Die WebException enthält kein Response-Objekt." }
+            Write-Error "  Exception Typ: $($CaughtException.Exception.GetType().FullName)"
+            Write-Error "  Exception Nachricht: $($CaughtException.Exception.Message)"
+            if ($CaughtException.Exception.InnerException) {
+                Write-Error "  INNERE Exception Typ: $($CaughtException.Exception.InnerException.GetType().FullName)"
+                Write-Error "  INNERE Exception Nachricht: $($CaughtException.Exception.InnerException.Message)"
             }
-        } else {
-            # Fall für Exceptions, die keine .Exception Eigenschaft haben (z.B. ParameterBindingException direkt)
-             Write-Error "Das abgefangene Fehlerobjekt (`$_`) ist: $($CaughtException.ToString())"
-             if ($CaughtException.FullyQualifiedErrorId -eq "NamedParameterNotFound,Microsoft.PowerShell.Commands.InvokeRestMethodCommand") {
-                Write-Error "HINWEIS: Der Fehler 'NamedParameterNotFound' deutet auf eine Inkompatibilität mit der PowerShell-Version hin (z.B. -StatusCodeVariable/-ErrorVariable in PS < 6.0)."
+            if ($CaughtException.Exception -is [System.Net.WebException]) {
+                $webEx = $CaughtException.Exception; Write-Error "  Status WebException: $($webEx.Status)"
+                if ($null -ne $webEx.Response) {
+                    $httpResponse = $webEx.Response; $actualHttpStatusCode = [int]$httpResponse.StatusCode
+                    Write-Error "  HTTP Status: $actualHttpStatusCode"; $errorBodyContent = "<Fehler Body>"
+                    try { 
+                        $responseStream = $httpResponse.GetResponseStream()
+                        if ($responseStream.CanRead){ 
+                            $streamReader = New-Object System.IO.StreamReader($responseStream, [System.Text.Encoding]::UTF8) 
+                            $errorBodyContent = $streamReader.ReadToEnd()
+                            $streamReader.Close() 
+                        } else { $errorBodyContent = "<Stream nicht lesbar>" }
+                        $responseStream.Close() 
+                    } catch { $errorBodyContent = "<Ex Body: $($_.Exception.Message)>" }
+                    Write-Error "  Fehler-Body Server: $errorBodyContent" 
+                } else { Write-Warning "  WebException ohne Response-Objekt." }
             }
         }
-    }
-    finally {
+    } finally {
         $ErrorActionPreference = $ErrorActionPreferenceBackup
-        Write-Host "DEBUG: Send-ScanReport beendet. HTTP-Statuscode (falls ermittelt): $actualHttpStatusCode"
+        Write-Host "DEBUG: Send-ScanReport beendet. HTTP-Status: $actualHttpStatusCode"
     }
 }
 
-# --- Hilfsfunktion zur Konvertierung von Defender Event Informationen ---
+function Get-SimplifiedEventInfo {
+    param(
+        [Parameter(Mandatory=$true)] $EventMessageInput, 
+        [Parameter(Mandatory=$true)] $EventId
+    )
+    $CleanedEventMessage = ($EventMessageInput -replace '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '').Trim()
+    # Korrigierter String-Interpolation
+    $simplified = @{ Message = "Event ${EventId}: " + ($CleanedEventMessage -split '\r?\n')[0]; Details = $null }
+
+    if ($CleanedEventMessage -match "Name: (.*?)\s*(ID:.*?)?Pfad: (.*?)\s*(Aktion: (.*?)\s*)?Erkennungsquelle: (.*?)\s*(Benutzer:.*?)?$") {
+        $name = $Matches[1].Trim()
+        $path = $Matches[3].Trim()
+        $action = if ($Matches[5]) { $Matches[5].Trim() } else { "Unbekannt" }
+        $source = $Matches[6].Trim()
+        $simplified.Message = "Bedrohung: $($name -replace '[\x00-\x1F\x7F]','') ($($source -replace '[\x00-\x1F\x7F]',''))"
+        $simplified.Details = "Pfad: $($path -replace '[\x00-\x1F\x7F]',''), Aktion: $($action -replace '[\x00-\x1F\x7F]','')"
+    } elseif ($CleanedEventMessage -match "Scan (erfolgreich beendet|abgebrochen|Fehler während Scan)") {
+        $status = $Matches[1]
+        $simplified.Message = "Scan-Status: $status"
+        if ($CleanedEventMessage -match "Bedrohungen gefunden") { $simplified.Message += " (Bedrohungen gefunden)"}
+    }
+    $simplified.Message = ($simplified.Message -replace '[\x00-\x1F\x7F]','').Trim()
+    if ($simplified.Details) {
+        $simplified.Details = ($simplified.Details -replace '[\x00-\x1F\x7F]','').Trim()
+    }
+    return $simplified
+}
+
 function ConvertFrom-DefenderEvent {
     param( [Parameter(Mandatory=$true)] $Event )
-    $result = @{ ScanTime = $Event.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"); ResultMessage = "Unbehandeltes Event (ID: $($Event.Id))"; ThreatsFound = $false; ThreatDetails = $null }
+    $eventTimeUTC = $Event.TimeCreated.ToUniversalTime().ToString("o") 
+    $simplifiedInfo = Get-SimplifiedEventInfo -EventMessage $Event.Message -EventId $Event.Id
+    
+    $result = @{ 
+        ScanTime = $eventTimeUTC
+        ResultMessage = $simplifiedInfo.Message
+        ThreatsFound = $false 
+        ThreatDetails = $simplifiedInfo.Details 
+    }
+    
     switch ($Event.Id) {
-        1001 { $result.ResultMessage = "Scan erfolgreich beendet. Keine Bedrohungen gefunden."; $result.ThreatsFound = $false }
-        1002 { $result.ResultMessage = "Scan erfolgreich beendet. Bedrohungen gefunden und behandelt."; $result.ThreatsFound = $true }
-        1005 { $result.ResultMessage = "Fehler während Scan: $($Event.Message)" }
-        1116 { $result.ResultMessage = "Bedrohung erkannt: $($Event.Message)"; $result.ThreatsFound = $true; $result.ThreatDetails = $Event.Message }
-        1117 { $result.ResultMessage = "Aktion gegen Bedrohung erfolgreich: $($Event.Message)"; $result.ThreatsFound = $true }
-        1118 { $result.ResultMessage = "FEHLER Aktion gegen Bedrohung: $($Event.Message)"; $result.ThreatsFound = $true; $result.ThreatDetails = $Event.Message }
-        1119 { $result.ResultMessage = "Scan abgebrochen: $($Event.Message)" }
-        default { Write-Warning "Unbekannte Event ID $($Event.Id) in ConvertFrom-DefenderEvent." }
+        1001 { $result.ThreatsFound = $false } 
+        1002 { $result.ThreatsFound = $true  } 
+        1005 {} 
+        1116 { $result.ThreatsFound = $true }
+        1117 { $result.ThreatsFound = $true }
+        1118 { $result.ThreatsFound = $true }
+        1119 {}
+        default { Write-Warning "Unbekannte Event ID $($Event.Id) für ConvertFrom-DefenderEvent." }
+    }
+    if (-not $result.ThreatDetails -and $result.ThreatsFound -and $Event.Message -match "Name: ") {
+        $result.ThreatDetails = "Details: " + (($Event.Message -replace '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '').Trim() -split '\r?\n')[0..2] -join " " 
     }
     return $result
+}
+
+function Get-InterimDefenderThreatEvents {
+    param(
+        [Parameter(Mandatory=$true)]
+        [datetime]$SinceTimeUTCtoQuery
+    )
+    Write-Host "Suche nach Defender-Bedrohungs-Events seit $($SinceTimeUTCtoQuery.ToLocalTime()) ($($SinceTimeUTCtoQuery.ToString("o")) UTC)..."
+    $relevantEventIds = @(1002, 1005, 1116, 1117, 1118, 1119) 
+    try {
+        $events = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 200 -ErrorAction SilentlyContinue |
+            Where-Object { ($_.TimeCreated.ToUniversalTime() -gt $SinceTimeUTCtoQuery) -and ($_.Id -in $relevantEventIds) } |
+            Sort-Object TimeCreated
+        if ($events) { Write-Host "> $($events.Count) relevante 'Zwischendurch'-Events gefunden." }
+        else { Write-Host "> Keine relevanten 'Zwischendurch'-Defender-Events gefunden." }
+        return $events
+    } catch { Write-Warning "Fehler beim Abrufen von 'Zwischendurch'-Events: $($_.Exception.Message)"; return $null }
 }
 
 # --- Haupt-Polling-Schleife ---
 Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Starte Haupt-Polling-Schleife..."
 try {
     while ($true) {
+        $currentLoopTimeUTC = (Get-Date).ToUniversalTime()
+        # Write-Host "DEBUG_LOOP: Schleifenanfang - $($currentLoopTimeUTC.ToString("o"))" # Kann bei Bedarf einkommentiert werden
+
         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Frage Befehle vom Server ab: $CommandUrl"
-        $commandHeaders = @{}
-        # if ($ApiKey) { $commandHeaders["X-API-Key"] = $ApiKey }
-
-        $commandResponse = $null
-        $commandErrorOccurred = $false
-        $commandActualHttpStatusCode = 0 # Für den tatsächlichen HTTP-Statuscode bei der Befehlsabfrage
-
+        $commandResponse = $null; $commandErrorOccurred = $false; $commandActualHttpStatusCode = 0
         try {
-            # -StatusCodeVariable und -ErrorVariable entfernt für PS 5.1 Kompatibilität
-            $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -Headers $commandHeaders -TimeoutSec 20 -ErrorAction Stop
-            $commandActualHttpStatusCode = 200 # Annahme: Erfolg, wenn keine Exception bei GET
-            $commandErrorOccurred = $false
-        }
-        catch {
-            $commandErrorOccurred = $true
-            $CaughtCmdException = $_
-            $apiErrorMessage = "Fehler bei Invoke-RestMethod (Befehlsabfrage): $($CaughtCmdException.ToString())" # Komplette Exception für mehr Details
-
+            $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -TimeoutSec 20 -ErrorAction Stop 
+            $commandActualHttpStatusCode = 200; $commandErrorOccurred = $false
+        } catch {
+            $commandErrorOccurred = $true; $CaughtCmdException = $_
+            $apiErrorMessage = "Fehler Invoke-RestMethod (Befehlsabfrage): $($CaughtCmdException.ToString())"
             if ($CaughtCmdException.Exception -is [System.Net.WebException] -and $null -ne $CaughtCmdException.Exception.Response) {
-                $httpResponse = $CaughtCmdException.Exception.Response
-                $commandActualHttpStatusCode = [int]$httpResponse.StatusCode
+                $httpResponse = $CaughtCmdException.Exception.Response; $commandActualHttpStatusCode = [int]$httpResponse.StatusCode
                 $errorBodyDetail = ""; try { $errStream = $httpResponse.GetResponseStream(); if ($errStream.CanRead){ $errReader = New-Object System.IO.StreamReader($errStream); $errorBodyDetail = $errReader.ReadToEnd(); $errReader.Close() } else { $errorBodyDetail = "<Stream nicht lesbar>" }; $errStream.Close() } catch { $errorBodyDetail = "<Ex beim Lesen: $($_.Exception.Message)>" }
                 $apiErrorMessage = "HTTP Fehler $commandActualHttpStatusCode (Befehlsabfrage). Body: '$errorBodyDetail'. Urspr. Fehler: $($CaughtCmdException.Exception.Message)"
-            }
+            } 
+            if ($commandActualHttpStatusCode -eq 404) { Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - FEHLER 404: Laptop '$AliasName' nicht registriert. $apiErrorMessage"; Start-Sleep -Seconds 3600 }
+            else { Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Fehler Befehlsabruf (Status $commandActualHttpStatusCode): $apiErrorMessage"; Start-Sleep -Seconds ($PollingIntervalSeconds * 2) }
+        } 
+        # Write-Host "DEBUG_LOOP: Nach Befehlsabruf" # Kann bei Bedarf einkommentiert werden
 
-            if ($commandActualHttpStatusCode -eq 404) {
-                Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - FEHLER 404: Laptop '$AliasName' nicht registriert. Pause. $apiErrorMessage"
-                Start-Sleep -Seconds 3600
-            } else {
-                Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Fehler Befehlsabruf (Status $commandActualHttpStatusCode): $apiErrorMessage"
-                Start-Sleep -Seconds ($PollingIntervalSeconds * 2)
+        $interimEventsFoundAndProcessed = $false 
+        $interimThreatDetailsAggregated = [System.Collections.Generic.List[string]]::new()
+        $interimEventsSummaryMessages = [System.Collections.Generic.List[string]]::new()
+        $maxInterimEventsToReport = 5 
+
+        if ($Global:LastSuccessfulReportTimeUTC) {
+            # Write-Host "DEBUG_LOOP: Vor Get-InterimDefenderThreatEvents" # Kann bei Bedarf einkommentiert werden
+            $collectedInterimEvents = Get-InterimDefenderThreatEvents -SinceTimeUTCtoQuery $Global:LastSuccessfulReportTimeUTC
+            if ($collectedInterimEvents) {
+                $interimEventsFoundAndProcessed = $true 
+                Write-Warning "Zwischendurch-Ereignisse seit letztem Report gefunden! Verarbeite..."
+                $eventsToProcess = $collectedInterimEvents | Sort-Object TimeCreated -Descending 
+                
+                for ($i = 0; $i -lt $eventsToProcess.Count; $i++) {
+                    $evt = $eventsToProcess[$i]
+                    $interpretedEvt = ConvertFrom-DefenderEvent -Event $evt
+                    
+                    if ($i -lt $maxInterimEventsToReport) {
+                        $summaryMsg = "Interim (ID $($evt.Id) @ $($evt.TimeCreated.ToLocalTime())): $($interpretedEvt.ResultMessage)"
+                        $interimEventsSummaryMessages.Add($summaryMsg)
+                        if ($interpretedEvt.ThreatsFound -and $interpretedEvt.ThreatDetails) {
+                            $interimThreatDetailsAggregated.Add($interpretedEvt.ThreatDetails)
+                        }
+                    } elseif ($i -eq $maxInterimEventsToReport) {
+                        $interimEventsSummaryMessages.Add("... und $($eventsToProcess.Count - $maxInterimEventsToReport) weitere Interim-Event(s).")
+                        break 
+                    }
+                }
             }
+            # Write-Host "DEBUG_LOOP: Nach Get-InterimDefenderThreatEvents (Processed: $interimEventsFoundAndProcessed)" # Kann bei Bedarf einkommentiert werden
         }
 
+        # Hauptlogik für Befehlsauswertung oder Interim-Report
         if (-not $commandErrorOccurred -and $null -ne $commandResponse) {
             if ($commandResponse.command) {
+                # Write-Host "DEBUG_LOOP: Innerhalb if (commandResponse.command)" # Kann bei Bedarf einkommentiert werden
                 Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Befehl: $($commandResponse.command), ScanTyp Server: $($commandResponse.scan_type)"
-                $scanTypeFromServer = $commandResponse.scan_type
                 switch ($commandResponse.command) {
                     "START_SCAN" {
-                        $scanTypeToUse = "FullScan"
-                        if ($null -ne $scanTypeFromServer -and (-not [string]::IsNullOrWhiteSpace($scanTypeFromServer))) {
-                            if ($scanTypeFromServer -eq "QuickScan" -or $scanTypeFromServer -eq "FullScan") { $scanTypeToUse = $scanTypeFromServer; Write-Host "Verwende Scan-Typ vom Server: $scanTypeToUse" }
-                            else { Write-Warning "Ungültiger Scan-Typ '$scanTypeFromServer'. Verwende '$scanTypeToUse'." }
-                        } else { Write-Host "Kein Scan-Typ vom Server, verwende '$scanTypeToUse'." }
-
+                        $scanTypeFromServer = $commandResponse.scan_type; $scanTypeToUse = "FullScan" 
+                        if ($scanTypeFromServer -in ("QuickScan", "FullScan")) { $scanTypeToUse = $scanTypeFromServer; Write-Host "Verwende Scan-Typ: $scanTypeToUse" }
+                        else { Write-Warning "Ungültiger/Kein Scan-Typ '$scanTypeFromServer'. Verwende '$scanTypeToUse'." }
+                        
                         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Aktion: Starte Scan (Typ: $scanTypeToUse)..."
-                        $scanCommandInitiationTimeUTC = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-                        $scanJob = $null # Initialisieren für den catch-Block
-
+                        $scanCommandInitiationTimeUTC = (Get-Date).ToUniversalTime(); $scanJob = $null 
                         try {
-                            Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Initiiere Scan ($scanTypeToUse) als Hintergrundjob..."
-                            $scanJob = Start-Job -ScriptBlock {
-                                param($scanType) # Parameter für den ScriptBlock definieren
-                                Start-MpScan -ScanType $scanType -ErrorAction Stop
-                            } -ArgumentList $scanTypeToUse # Argument an den ScriptBlock übergeben
-                            
-                            Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan ($scanTypeToUse) als Job $($scanJob.Id) gestartet."
-
-                            $scanInProgress = $true
-                            $maxWaitMinutes = if ($scanTypeToUse -eq "QuickScan") { 30 } else { 360 }
-                            $waitIntervalSeconds = 30
-                            $elapsedWaitSeconds = 0
-
-                            Write-Host "Warte auf Scan-Abschluss (max. $maxWaitMinutes Min)..."
-
+                            Write-Host "... Initiiere Scan ($scanTypeToUse) als Job..."
+                            $scanJob = Start-Job -ScriptBlock { param($st) Start-MpScan -ScanType $st -ErrorAction Stop } -ArgumentList $scanTypeToUse
+                            Write-Host "... Scan ($scanTypeToUse) als Job $($scanJob.Id) gestartet."
+                            $scanInProgress = $true; $maxWaitMinutes = if ($scanTypeToUse -eq "QuickScan") { 30 } else { 360 }; $waitIntervalSeconds = 30; $elapsedWaitSeconds = 0
+                            Write-Host "... Warte auf Scan-Abschluss (max. $maxWaitMinutes Min)..."
                             while ($scanInProgress -and ($elapsedWaitSeconds -lt ($maxWaitMinutes * 60))) {
-                                Start-Sleep -Seconds $waitIntervalSeconds
-                                $elapsedWaitSeconds += $waitIntervalSeconds
-                                try {
-                                    $mpStatus = Get-MpComputerStatus -ErrorAction SilentlyContinue
-                                    if ($null -ne $mpStatus) {
-                                        $scanInProgress = $mpStatus.MpScanInProgress
-                                        if (-not $scanInProgress) {
-                                            Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan nicht mehr 'in Progress' (nach ca. $($elapsedWaitSeconds/60) Min.). Status von Get-MpComputerStatus."
-                                            break # Scan ist beendet, Schleife verlassen
-                                        }
-                                    } else {
-                                        Write-Warning "Get-MpComputerStatus: kein Ergebnis."
-                                        # Alternative Prüfung: Job-Status, wenn MpComputerStatus keine Infos liefert
-                                        if ($scanJob.State -ne 'Running' -and $scanJob.State -ne 'NotStarted') { # NotStarted ist auch ein aktiver Status am Anfang
-                                            Write-Warning "Scan-Job ist nicht mehr 'Running' oder 'NotStarted'. Job-Status: $($scanJob.State). Beende Warte-Schleife."
-                                            $scanInProgress = $false # Schleife verlassen
-                                            break
-                                        }
-                                    }
-                                }
-                                catch { Write-Warning "Get-MpComputerStatus Fehler: $($_.Exception.Message)." }
-                                Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan läuft (Status laut MpComputerStatus: $scanInProgress, Job-Status: $($scanJob.State))... Wartezeit: ca. $($elapsedWaitSeconds/60) Min."
+                                Start-Sleep -Seconds $waitIntervalSeconds; $elapsedWaitSeconds += $waitIntervalSeconds
+                                try { $mpStatus = Get-MpComputerStatus -EA SilentlyContinue; if ($mpStatus) { $scanInProgress = $mpStatus.MpScanInProgress; if (-not $scanInProgress) { Write-Host "... Scan nicht mehr 'in Progress'."; break } } else { if ($scanJob.State -notin ('Running','NotStarted')) {$scanInProgress=$false; Write-Warning "Job nicht aktiv: $($scanJob.State)"; break;}} } catch { Write-Warning "Get-MpComputerStatus Fehler: $($_.Exception.Message)." }
+                                Write-Host "... Scan läuft (MpScanInProgress: $scanInProgress, Job: $($scanJob.State))... ca. $($elapsedWaitSeconds/60) Min."
+                            }
+                            if ($scanInProgress) { Write-Warning "... Scan Max-Wartezeit überschritten."; if ($scanJob.State -eq 'Running') { Stop-Job $scanJob -Force; Write-Warning "Job gestoppt."}}
+                            Wait-Job $scanJob -Timeout 10 | Out-Null
+                            $jobMessages = Receive-Job $scanJob -Keep; if ($jobMessages) { Write-Host "Job $($scanJob.Id) Meldungen:"; $jobMessages | ForEach-Object { Write-Host "  JOB: $_" }}
+
+                            Write-Host "... Lese Event Log für Scan-Ergebnis und assoziierte Bedrohungen..."
+                            Start-Sleep -Seconds 2
+                            $scanEndTimeUTC = (Get-Date).ToUniversalTime() 
+                            $currentScanEventsQueryStartTime = $scanCommandInitiationTimeUTC.AddMinutes(-2)
+
+                            $reportScanTime = $scanCommandInitiationTimeUTC.ToString("o") 
+                            $reportResultMessageAggregator = [System.Text.StringBuilder]::new()
+                            $reportThreatDetailsAggregator = [System.Text.StringBuilder]::new()
+                            $reportThreatsFound = $false
+                            
+                            [void]$reportResultMessageAggregator.AppendLine("Scan ($scanTypeToUse) initiiert $reportScanTime.")
+
+                            if ($jobMessages -match "JOB_ERROR") { 
+                                [void]$reportResultMessageAggregator.AppendLine("Scan-Job meldete Fehler: " + ($jobMessages -join "; "))
+                                $reportThreatsFound = $true 
+                                [void]$reportThreatDetailsAggregator.AppendLine("Scan-Job Fehler: " + ($jobMessages -join "; "))
                             }
 
-                            if ($scanInProgress) {
-                                Write-Warning "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Scan Max-Wartezeit überschritten oder Scan immer noch als 'in Progress' markiert."
-                                if ($scanJob.State -eq 'Running') {
-                                    Write-Warning "Stoppe laufenden Scan-Job $($scanJob.Id) aufgrund von Timeout."
-                                    Stop-Job -Job $scanJob -Force
-                                }
-                            }
+                            $scanSpecificEventsFound = $false 
 
-                            # Warte kurz, damit der Job ggf. Fehler schreiben kann, bevor wir Receive-Job aufrufen
-                            Wait-Job -Job $scanJob -Timeout 10 | Out-Null
-
-                            # Job-Output/Fehler abrufen
-                            $jobMessages = Receive-Job -Job $scanJob -Keep # -Keep, damit der Job für Remove-Job noch da ist
-                            if ($jobMessages) {
-                                Write-Host "Ausgaben/Fehler vom Scan-Job $($scanJob.Id):"
-                                $jobMessages | ForEach-Object { Write-Host "  JOB_MSG: $_" }
-                            }
-
-                            Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Lese Event Log..."
-                            Start-Sleep -Seconds 5 # Kurze Pause, um sicherzustellen, dass alle Events geschrieben wurden
-                            $eventQueryStartTime = ([datetime]$scanCommandInitiationTimeUTC).AddMinutes(-2)
-
-                            $finalScanEvent = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 100 |
-                                Where-Object { ($_.Id -in (1001,1002,1005,1119)) -and ($_.TimeCreated -ge $eventQueryStartTime) } |
+                            $finalScanEvent = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 20 |
+                                Where-Object { ($_.Id -in (1001,1002,1005,1119)) -and ($_.TimeCreated.ToUniversalTime() -ge $currentScanEventsQueryStartTime) -and ($_.TimeCreated.ToUniversalTime() -le $scanEndTimeUTC) } | 
                                 Sort-Object TimeCreated -Descending | Select-Object -First 1
 
-                            $reportScanTime = $scanCommandInitiationTimeUTC
-                            $reportResultMessage = "Scan ($scanTypeToUse) initiiert $scanCommandInitiationTimeUTC, finales Abschluss-Event nicht gefunden (ab $eventQueryStartTime)."
-                            $reportThreatsFound = $false
-                            $reportThreatDetails = $null
-
                             if ($finalScanEvent) {
-                                $interpretedResult = ConvertFrom-DefenderEvent -Event $finalScanEvent
-                                $reportScanTime = $interpretedResult.ScanTime
-                                $reportResultMessage = $interpretedResult.ResultMessage
-                                $reportThreatsFound = [System.Convert]::ToBoolean($interpretedResult.ThreatsFound)
-                                $reportThreatDetails = $interpretedResult.ThreatDetails
-                                Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Finales Scan-Ergebnis (Event $($finalScanEvent.Id) um $($finalScanEvent.TimeCreated)): $reportResultMessage"
+                                $scanSpecificEventsFound = $true
+                                $interpretedScanEndResult = ConvertFrom-DefenderEvent -Event $finalScanEvent
+                                [void]$reportResultMessageAggregator.AppendLine("Scan-Abschluss-Event (ID $($finalScanEvent.Id)): $($interpretedScanEndResult.ResultMessage)")
+                                if ($interpretedScanEndResult.ThreatsFound) { $reportThreatsFound = $true }
+                                if ($interpretedScanEndResult.ThreatDetails) { [void]$reportThreatDetailsAggregator.AppendLine($interpretedScanEndResult.ThreatDetails) }
                             } else {
-                                Write-Warning $reportResultMessage
-                                $threatEvent = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 50 |
-                                    Where-Object { ($_.Id -in (1116,1117,1118)) -and ($_.TimeCreated -ge $eventQueryStartTime) } |
-                                    Sort-Object TimeCreated -Descending | Select-Object -First 1
+                                [void]$reportResultMessageAggregator.AppendLine("Kein offizielles Scan-Abschluss-Event (1001/1002) gefunden.")
+                            }
+                            
+                            $threatEventsDuringThisScanPeriod = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 50 |
+                                Where-Object { ($_.Id -in (1116,1117,1118)) -and ($_.TimeCreated.ToUniversalTime() -ge $currentScanEventsQueryStartTime) -and ($_.TimeCreated.ToUniversalTime() -le $scanEndTimeUTC) } |
+                                Sort-Object TimeCreated
 
-                                if ($threatEvent) {
-                                    $interpretedThreat = ConvertFrom-DefenderEvent -Event $threatEvent
-                                    $reportResultMessage += " | Bedrohungs-Event (ID $($threatEvent.Id) um $($threatEvent.TimeCreated)): $($interpretedThreat.ResultMessage)"
-                                    # Bedrohungen können zusätzlich gefunden werden, auch wenn kein Abschluss-Event vorliegt
-                                    $reportThreatsFound = [System.Convert]::ToBoolean($interpretedThreat.ThreatsFound) -or $reportThreatsFound
-                                    $reportThreatDetails = if ([string]::IsNullOrWhiteSpace($reportThreatDetails)) { $interpretedThreat.ThreatDetails } else { "$reportThreatDetails; $($interpretedThreat.ThreatDetails)" }
-                                    Write-Warning "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Zusätzliches Bedrohungs-Event gefunden: $($interpretedThreat.ResultMessage)"
-                                } else {
-                                    $reportThreatsFound = [System.Convert]::ToBoolean($reportThreatsFound)
+                            if ($threatEventsDuringThisScanPeriod) {
+                                $scanSpecificEventsFound = $true
+                                [void]$reportResultMessageAggregator.AppendLine("Zusätzliche Bedrohungs-Events im Scan-Zeitraum:")
+                                foreach ($thrEvt in $threatEventsDuringThisScanPeriod) {
+                                    $interpretedThreat = ConvertFrom-DefenderEvent -Event $thrEvt
+                                    [void]$reportResultMessageAggregator.AppendLine("- Event ID $($thrEvt.Id) @ $($thrEvt.TimeCreated.ToLocalTime()): $($interpretedThreat.ResultMessage)")
+                                    if ($interpretedThreat.ThreatsFound) { $reportThreatsFound = $true } 
+                                    if ($interpretedThreat.ThreatDetails) { [void]$reportThreatDetailsAggregator.AppendLine($interpretedThreat.ThreatDetails) }
                                 }
                             }
-                            Send-ScanReport -ScanTime $reportScanTime -ScanType $scanTypeToUse -ScanResultMessage $reportResultMessage -ThreatsFound $reportThreatsFound -ThreatDetails $reportThreatDetails
-                        }
-                        catch {
-                            $scanErrorMsg = $_.Exception.Message
-                            Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Fehler bei Start-MpScan/Ergebnisermittlung oder Job-Handling: $scanErrorMsg. Kompletter Fehler: $($_.ToString())"
-                            Send-ScanReport -ScanTime $scanCommandInitiationTimeUTC -ScanType $scanTypeToUse -ScanResultMessage "Kritischer Fehler im Scan-Prozess: $scanErrorMsg" -ThreatsFound $true -ThreatDetails "PS Exception: $($_.ToString())"
-                        }
-                        finally {
-                            # Job aufräumen, falls er erstellt wurde
-                            if ($null -ne $scanJob) {
-                                Write-Host "Entferne Scan-Job $($scanJob.Id) (Status: $($scanJob.State))."
-                                Remove-Job -Job $scanJob -Force
+                            
+                            if (-not $scanSpecificEventsFound) {
+                                [void]$reportResultMessageAggregator.AppendLine("Keine spezifischen Scan- oder Bedrohungs-Events für diesen Scan-Vorgang gefunden.")
                             }
+
+                            if ($interimEventsFoundAndProcessed) { 
+                                [void]$reportResultMessageAggregator.Insert(0, "INTERIM EVENTS (seit letztem Report bis Scan-Start): $($interimEventsSummaryMessages -join ' | ') || SCAN-BEZOGEN: ")
+                                $reportThreatsFound = $true 
+                                if ($interimThreatDetailsAggregated.Count -gt 0) {
+                                    $currentDetailsString = $reportThreatDetailsAggregator.ToString()
+                                    $reportThreatDetailsAggregator.Clear()
+                                    [void]$reportThreatDetailsAggregator.Append("INTERIM DETAILS: $($interimThreatDetailsAggregated -join ' | ')")
+                                    if (-not [string]::IsNullOrWhiteSpace($currentDetailsString)) {
+                                        [void]$reportThreatDetailsAggregator.Append(" || SCAN-BEZOGENE DETAILS: " + $currentDetailsString)
+                                    }
+                                }
+                            }
+                            Send-ScanReport -ScanTime $reportScanTime -ScanType $scanTypeToUse `
+                                -ScanResultMessage $reportResultMessageAggregator.ToString().Trim() `
+                                -ThreatsFound $reportThreatsFound `
+                                -ThreatDetails $reportThreatDetailsAggregator.ToString().Trim()
+                        } catch {
+                            $scanErrorMsg = $_.Exception.Message; $fullError = $_.ToString()
+                            Write-Error "... Fehler bei Start-MpScan/Ergebnisermittlung: $scanErrorMsg."
+                            $errMsgForReport = [System.Text.StringBuilder]::new()
+                            if ($interimEventsFoundAndProcessed) { [void]$errMsgForReport.Append("INTERIM EVENTS: $($interimEventsSummaryMessages -join ' | ') | DANN FEHLER: ") }
+                            [void]$errMsgForReport.Append("Kritischer Fehler im Scan-Prozess: $scanErrorMsg")
+                            
+                            $detailsForReport = [System.Text.StringBuilder]::new()
+                            [void]$detailsForReport.Append("PS Exception: $fullError")
+                            if($interimThreatDetailsAggregated.Count -gt 0){ [void]$detailsForReport.Append("; INTERIM DETAILS: $($interimThreatDetailsAggregated -join ' | ')") }
+                            
+                            Send-ScanReport -ScanTime $scanCommandInitiationTimeUTC.ToString("o") -ScanType $scanTypeToUse `
+                                -ScanResultMessage $errMsgForReport.ToString().Trim() `
+                                -ThreatsFound $true `
+                                -ThreatDetails $detailsForReport.ToString().Trim()
+                        } finally {
+                            if ($null -ne $scanJob) { Write-Host "... Entferne Job $($scanJob.Id) (Status: $($scanJob.State))."; Remove-Job $scanJob -Force }
                         }
-                    }
+                    } # Ende START_SCAN
                     default { Write-Warning "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Unbekannter Befehl: $($commandResponse.command)" }
-                }
-            } else { Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Kein spezifischer Befehl empfangen." }
+                } # Ende switch
+                # Write-Host "DEBUG_LOOP: Nach Switch(commandResponse.command)" # Kann bei Bedarf einkommentiert werden
+            } elseif ($interimEventsFoundAndProcessed) { 
+                # Write-Host "DEBUG_LOOP: Innerhalb elseif (interimEventsFoundAndProcessed)" # Kann bei Bedarf einkommentiert werden
+                Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Kein Server-Befehl, aber Zwischendurch-Ereignisse gefunden. Sende Bericht."
+                $reportTime = (Get-Date).ToUniversalTime().ToString("o")
+                Send-ScanReport -ScanTime $reportTime -ScanType "InterimRealtimeEvent" `
+                    -ScanResultMessage ($interimEventsSummaryMessages -join ' | ') `
+                    -ThreatsFound $true `
+                    -ThreatDetails ($interimThreatDetailsAggregated -join ' | ')
+                # Write-Host "DEBUG_LOOP: Nach Send-ScanReport für Interim-Events" # Kann bei Bedarf einkommentiert werden
+            } else { 
+                # Write-Host "DEBUG_LOOP: Innerhalb else (kein Befehl, keine Interim-Events)" # Kann bei Bedarf einkommentiert werden
+                Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Kein spezifischer Befehl und keine Zwischendurch-Events seit letztem Report." 
+            }
+        } # Dies ist die schließende Klammer für if (-not $commandErrorOccurred -and $null -ne $commandResponse)
+
+        # Write-Host "DEBUG_LOOP: Vor Heartbeat Check" # Kann bei Bedarf einkommentiert werden
+        # Periodischer Check (Heartbeat)
+        if ($Global:LastSuccessfulReportTimeUTC -and (($currentLoopTimeUTC - $Global:LastInterimCheckTimeUTC).TotalMinutes -ge $InterimCheckIntervalMinutes)) {
+            Write-Host "Führe periodischen Check für Zwischendurch-Events durch (Intervall: $InterimCheckIntervalMinutes Min)..."
+            $Global:LastInterimCheckTimeUTC = $currentLoopTimeUTC 
+            
+            if (($currentLoopTimeUTC - $Global:LastSuccessfulReportTimeUTC).TotalHours -ge ($InterimCheckIntervalMinutes / 60 * 2) ) { 
+                 if (-not $interimEventsFoundAndProcessed) { 
+                    Write-Host "Lange keinen Report gesendet und keine akuten Zwischendurch-Events in diesem Zyklus. Sende 'Heartbeat'."
+                    Send-ScanReport -ScanTime $currentLoopTimeUTC.ToString("o") -ScanType "Heartbeat" -ScanResultMessage "Periodischer Check, alles ruhig seit letztem Report (basierend auf diesem Zyklus)." -ThreatsFound $false
+                 }
+            }
         }
+        # Write-Host "DEBUG_LOOP: Nach Heartbeat Check" # Kann bei Bedarf einkommentiert werden
+
         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Warte $PollingIntervalSeconds Sekunden bis zum nächsten Poll..."
         Start-Sleep -Seconds $PollingIntervalSeconds
-    }
+        # Write-Host "DEBUG_LOOP: Nach Start-Sleep, vor nächstem Schleifendurchlauf" # Kann bei Bedarf einkommentiert werden
+    } # Ende while
+} catch { 
+    Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Unerwarteter Fehler Hauptschleife: $($_.Exception.ToString()). Skript beendet."; exit 1 
 }
-catch { Write-Error "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Unerwarteter Fehler in Hauptschleife: $($_.Exception.ToString()). Skript beendet."; exit 1 }
