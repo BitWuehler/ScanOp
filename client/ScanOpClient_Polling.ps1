@@ -30,6 +30,10 @@ $ApiKey = $Config.ApiKey
 $PollingIntervalSeconds = $Config.PollingIntervalSeconds
 $InterimCheckIntervalMinutes = $Config.InterimCheckIntervalMinutes 
 
+if (-not $ApiKey) {
+    Write-Error "Unvollständige Konfiguration: ApiKey ist erforderlich."; exit 1
+}
+
 if (-not $AliasName -or -not $ServerBaseUrl -or -not $PollingIntervalSeconds) {
     Write-Error "Unvollständige Konfiguration: AliasName, ServerBaseUrl, PollingIntervalSeconds sind erforderlich."; exit 1
 }
@@ -93,8 +97,10 @@ function Send-ScanReport {
     $utf8Encoding = [System.Text.Encoding]::UTF8
     $payloadBytes = $utf8Encoding.GetBytes($payloadBodyJson)
 
-    $requestHeaders = @{ "Content-Type" = "application/json; charset=utf-8" }
-    # if ($ApiKey) { $requestHeaders["X-API-Key"] = $ApiKey } 
+    $requestHeaders = @{ 
+        "Content-Type" = "application/json; charset=utf-8";
+        "X-API-Key"    = $ApiKey
+    }
     
     $ErrorActionPreferenceBackup = $ErrorActionPreference; $ErrorActionPreference = "Stop"
     $responseVariable = $null; $actualHttpStatusCode = 0
@@ -226,7 +232,8 @@ try {
         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Frage Befehle vom Server ab: $CommandUrl"
         $commandResponse = $null; $commandErrorOccurred = $false; $commandActualHttpStatusCode = 0
         try {
-            $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -TimeoutSec 20 -ErrorAction Stop 
+            $commandRequestHeaders = @{ "X-API-Key" = $ApiKey }
+            $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -Headers $commandRequestHeaders -TimeoutSec 20 -ErrorAction Stop 
             $commandActualHttpStatusCode = 200; $commandErrorOccurred = $false
         } catch {
             $commandErrorOccurred = $true; $CaughtCmdException = $_

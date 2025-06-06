@@ -1,6 +1,7 @@
 {
-  "AliasName": "FinalTestLaptop",
-  "ServerBaseUrl": "http://127.0.0.1:8000/api/v1",
-  "ApiKey": "DEIN_GEHEIMER_API_SCHLUESSEL_HIER",
-  "PollingIntervalSeconds": 10
+    "AliasName": "FinalTestLaptop",
+    "ServerBaseUrl": "https://scanop.jonas-cloud.de",
+    "PollingIntervalSeconds": 10,
+    "InterimCheckIntervalMinutes": 60,
+    "ApiKey": "klendn493nmo483hf9p02g8jflkfnwaelfdh74093nfhowkdzgfapow3sdfsdf"
 }

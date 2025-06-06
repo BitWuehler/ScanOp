@@ -6,10 +6,12 @@ from typing import cast # Für explizites Type-Casting, um Pylance zu helfen
 
 from app import crud, schemas, models 
 from app.database import get_db
+from app.security import get_api_key
 
 router = APIRouter(
     prefix="/clientcommands",
     tags=["Client Commands"],
+    dependencies=[Depends(get_api_key)]
 )
 
 @router.get("/{laptop_identifier}", response_model=schemas.ClientCommandResponse)

@@ -7,11 +7,11 @@ DOTENV_PATH = PROJECT_ROOT / ".env"
 
 class Settings(BaseSettings):
     database_url: str
-    
-    # NEUE VARIABLEN
     secret_key: str
     app_username: str
     app_password: str
+
+    server_api_key: str
 
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,

@@ -8,10 +8,12 @@ from pydantic import ValidationError # Import für expliziten Exception-Typ
 
 from app import crud, models, schemas
 from app.database import get_db
+from app.security import get_api_key
 
 router = APIRouter(
     prefix="/scanreports",
     tags=["Scan Reports"],
+    dependencies=[Depends(get_api_key)]
 )
 
 @router.post("/", response_model=schemas.ScanReport, status_code=status.HTTP_201_CREATED)
