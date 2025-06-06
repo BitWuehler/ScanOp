@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function checkForUpdates() {
         try {
-            // KORREKTUR: Der Pfad zur Abfrage des Timestamps wurde an die neue Router-Struktur angepasst.
+            // KORREKTUR: Dies ist jetzt der endgültige, korrekte Pfad
             const response = await fetch('/api/v1/scanreports/last_update_timestamp');
             if (!response.ok) { 
                 console.warn(`Polling: Fehler beim Abrufen des Update-Status (${response.status})`);

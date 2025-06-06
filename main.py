@@ -1,5 +1,5 @@
 # main.py
-from fastapi import FastAPI, Request, Form, status # KORREKTUR: 'status' hier wieder hinzugefügt
+from fastapi import FastAPI, Request, Form, status, APIRouter # KORREKTUR: APIRouter hier hinzugefügt
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from app.config import settings
 from app.auth import verify_password
+# WICHTIG: Die Router werden importiert
 from app.api.endpoints import laptops, reports, commands
 from app.web_routes import router as web_router
 
@@ -20,20 +21,17 @@ STATIC_FILES_DIR = PROJECT_ROOT_DIR / "static"
 TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
 app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR), name="static")
 
-# WICHTIG: Die `templates` Instanz wird jetzt in den jeweiligen Router-Dateien erstellt.
-# Wir behalten die Definition der Hilfsfunktion hier, da sie logisch zu `main` gehört.
+templates_for_login = Jinja2Templates(directory=TEMPLATES_DIR)
+
 def to_utc_iso_string(dt: datetime | None) -> str:
     if dt is None: return ""
     if dt.tzinfo is None: dt_utc = dt.replace(tzinfo=timezone.utc)
     else: dt_utc = dt.astimezone(timezone.utc)
     return dt_utc.isoformat().replace('+00:00', 'Z')
-
-# --- UNGESCHÜTZTE Auth-Routen ---
-# Diese bleiben hier, da sie keine komplexen Abhängigkeiten haben.
-templates_for_login = Jinja2Templates(directory=TEMPLATES_DIR)
-# Wir registrieren die globale Funktion auch für dieses Template-Objekt
 templates_for_login.env.globals['to_utc_iso'] = to_utc_iso_string
 
+
+# --- UNGESCHÜTZTE Auth-Routen ---
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request):
     return templates_for_login.TemplateResponse("login.html", {"request": request})
@@ -50,10 +48,15 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
+
 # --- Einbinden der Router ---
-# API Endpunkte (BLEIBEN UNGESCHÜTZT FÜR DIE CLIENTS)
-app.include_router(laptops.router, prefix="/api/v1")
-app.include_router(reports.router, prefix="/api/v1")
-app.include_router(commands.router, prefix="/api/v1")
+# Ein Haupt-Router für die gesamte v1 API
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(laptops.router)
+api_v1_router.include_router(reports.router)
+api_v1_router.include_router(commands.router)
+
+app.include_router(api_v1_router)
+
 # Geschützte Web-Seiten
 app.include_router(web_router)
