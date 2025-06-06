@@ -12,9 +12,10 @@
         <h1>ScanOp - {{ title }}</h1>
         <nav>
             <ul>
-                <li><a href="{{ url_for('read_root_html') }}">Startseite</a></li>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
-                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht (Heute)</a></li>
+                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
+                <!-- NEU: Logout Link -->
+                <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
             </ul>
         </nav>
         <div style="margin-top: 10px;">
@@ -50,7 +51,6 @@
                 <tr class="laptop-report-row">
                     <td>{{ laptop.alias_name }}</td>
                     <td>{{ laptop.hostname }}</td>
-                    <!-- KORREKTUR: Die neue globale Template-Funktion wird verwendet -->
                     <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
                     <td>
                         {% if laptop.last_scan_result_message %}

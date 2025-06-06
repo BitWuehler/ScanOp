@@ -6,9 +6,6 @@
     <title>{{ title }} - ScanOp</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/sortable-theme-bootstrap.css') }}" />
-    <!-- ======================================================= -->
-    <!-- KORREKTUR: Fehlende Day.js-Bibliothek hier hinzugefügt. -->
-    <!-- ======================================================= -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 </head>
 <body>
@@ -16,9 +13,10 @@
         <h1>ScanOp - {{ title }}</h1>
         <nav>
             <ul>
-                <li><a href="{{ url_for('read_root_html') }}">Startseite</a></li>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
-                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht (Heute)</a></li>
+                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
+                <!-- NEU: Logout Link -->
+                <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
             </ul>
         </nav>
     </header>
