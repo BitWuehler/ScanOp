@@ -3,15 +3,22 @@
 document.addEventListener('DOMContentLoaded', () => {
     const statusMessageDiv = document.getElementById('status-message');
 
+    // --- Hilfsfunktionen ---
     function showStatusMessage(message, type = 'info') {
-        if (!statusMessageDiv) return;
+        if (!statusMessageDiv) {
+            console.warn("Status message div nicht gefunden!");
+            return;
+        }
         statusMessageDiv.textContent = message;
         statusMessageDiv.style.display = 'block';
-        statusMessageDiv.className = ''; 
+        statusMessageDiv.className = ''; // Alte Klassen entfernen
         const typeToClass = { success: 'status-success', error: 'status-error', info: 'status-info'};
         statusMessageDiv.classList.add(typeToClass[type] || 'status-info');
+
+        // Nachricht nach einiger Zeit ausblenden, außer es ist ein Fehler
         if (type !== 'error') {
             setTimeout(() => {
+                // Nur ausblenden, wenn es noch dieselbe Nachricht ist (um Überschreiben zu vermeiden)
                 if (statusMessageDiv.textContent === message) {
                     statusMessageDiv.style.display = 'none';
                 }
@@ -19,73 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function formatUtcToLocalDateTime(utcDateString) {
-        if (!utcDateString || utcDateString === 'N/A') {
-            return 'N/A';
-        }
-        try {
-            const date = new Date(utcDateString); // JavaScript Date interpretiert ISO 8601 (wie "o" Format) als UTC
-            if (isNaN(date.getTime())) { // Ungültiges Datum
-                return 'Ungült. Datum';
-            }
-            // Optionen für die Formatierung
-            const options = {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                // timeZoneName: 'short' // Optional: Zeitzonen-Kürzel anzeigen
-            };
-            return date.toLocaleString(undefined, options); // undefined für lokale Sprache/Formatierung
-        } catch (e) {
-            console.error("Error formatting date:", utcDateString, e);
-            return utcDateString; // Fallback auf Originalstring
-        }
-    }
-
-    function convertTableDateTimes() {
-        // Für die Laptop-Übersichtstabelle
-        const laptopTableRows = document.querySelectorAll('#laptop-row-template, table.sortable-theme-bootstrap tbody tr'); // Auch Template-Zeile anpassen, falls vorhanden
-
-        laptopTableRows.forEach(row => {
-            // Spalte "Zuletzt gesehen (API)" - Annahme: ist die 4. <td> (Index 3), wenn Scan Status die 4. Spalte ist
-            // Besser: Mit spezifischen Klassen arbeiten
-            const lastApiContactCell = row.cells[4]; // Index anpassen, falls Spaltenreihenfolge anders
-            if (lastApiContactCell && lastApiContactCell.textContent !== 'N/A') {
-                lastApiContactCell.textContent = formatUtcToLocalDateTime(lastApiContactCell.dataset.utcTime || lastApiContactCell.textContent);
-                lastApiContactCell.title = `UTC: ${lastApiContactCell.dataset.utcTime || 'unbekannt'}`;
-            }
-
-            // Spalte "Letzter Scan" - Annahme: ist die 5. <td> (Index 4)
-            const lastScanTimeCell = row.cells[5]; // Index anpassen
-            if (lastScanTimeCell && lastScanTimeCell.textContent !== 'N/A') {
-                lastScanTimeCell.textContent = formatUtcToLocalDateTime(lastScanTimeCell.dataset.utcTime || lastScanTimeCell.textContent);
-                 lastScanTimeCell.title = `UTC: ${lastScanTimeCell.dataset.utcTime || 'unbekannt'}`;
-            }
-        });
-
-        // Hier könnten später auch Datumsfelder auf der Berichtsseite konvertiert werden
-        document.querySelectorAll('.convert-utc-date').forEach(element => {
-            if (element.textContent && element.textContent !== 'N/A') {
-                const originalUtc = element.dataset.utcTime || element.textContent;
-                element.textContent = formatUtcToLocalDateTime(originalUtc);
-                element.title = `UTC: ${originalUtc}`;
-            }
-        });
-    }
-    
-    // Konvertierung beim Laden der Seite aufrufen
-    if (document.querySelector('table.sortable-theme-bootstrap') || document.querySelector('.daily-report-table')) {
-        convertTableDateTimes();
-    }
-
     function updatePendingCommandInUI(laptopAlias, command, scanType) {
         const row = document.getElementById(`laptop-row-${laptopAlias}`);
         if (row) {
             const commandCell = row.querySelector('.pending-command-cell');
-            const actionsCell = row.querySelector('.actions-cell');
+            const actionsCell = row.querySelector('.actions-cell'); // Zelle mit den Aktionsbuttons
+
             if (commandCell) {
                 commandCell.textContent = command ? `${command} (${scanType || ''})`.trim() : 'Kein';
             }
-            // Ggf. "Befehl abbrechen"-Button ein-/ausblenden
+
             if (actionsCell) {
                 let cancelButton = actionsCell.querySelector(`.cancel-command-button[data-laptop-alias="${laptopAlias}"]`);
                 if (command && !cancelButton) { // Befehl ist da, Button fehlt -> erstellen
@@ -94,7 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelButton.dataset.laptopAlias = laptopAlias;
                     cancelButton.title = 'Aktuellen Befehl abbrechen';
                     cancelButton.textContent = 'Bef. X';
-                    actionsCell.insertBefore(cancelButton, actionsCell.querySelector('.delete-laptop-button')); // Vor Löschen-Button einfügen
+                    // Füge den Button vor dem Löschen-Button ein, falls vorhanden, sonst am Ende
+                    const deleteButton = actionsCell.querySelector('.delete-laptop-button');
+                    if (deleteButton) {
+                        actionsCell.insertBefore(cancelButton, deleteButton);
+                    } else {
+                        actionsCell.appendChild(cancelButton);
+                    }
                     attachCancelListener(cancelButton); // Neuen Listener anhängen
                 } else if (!command && cancelButton) { // Kein Befehl, Button ist da -> entfernen
                     cancelButton.remove();
@@ -109,6 +65,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatUtcToLocalDateTime(utcDateString) {
+        if (!utcDateString || utcDateString.trim() === 'N/A' || utcDateString.trim() === '') {
+            return 'N/A';
+        }
+        try {
+            const date = new Date(utcDateString); 
+            if (isNaN(date.getTime())) { 
+                return 'Ungült. Datum';
+            }
+            const options = {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+            };
+            return date.toLocaleString(undefined, options); 
+        } catch (e) {
+            console.error("Error formatting date:", utcDateString, e);
+            return utcDateString; 
+        }
+    }
+
+    function convertTableDateTimes() {
+        // Für Laptop-Übersicht und Tagesbericht
+        document.querySelectorAll('td.date-cell').forEach(cell => {
+            const utcTime = cell.dataset.utcTime;
+            if (utcTime) {
+                cell.textContent = formatUtcToLocalDateTime(utcTime);
+                cell.title = `UTC: ${utcTime}`;
+            }
+        });
+
+        // Generische Konverter für andere Elemente mit .convert-utc-date
+        document.querySelectorAll('.convert-utc-date').forEach(element => {
+            const originalUtc = element.dataset.utcTime || element.textContent.trim();
+            if (originalUtc && originalUtc !== 'N/A' && originalUtc !== '') {
+                 // Einfache Prüfung, ob es wie ein ISO-String mit Zeitzone aussieht
+                if (originalUtc.includes('T') && (originalUtc.includes('Z') || originalUtc.includes('+') || originalUtc.includes('-'))) {
+                    element.textContent = formatUtcToLocalDateTime(originalUtc);
+                    element.title = `UTC: ${originalUtc}`;
+                }
+            }
+        });
+    }
+
+    // --- Event Listeners für Buttons ---
     // Scan-Buttons
     document.querySelectorAll('.scan-button').forEach(button => {
         button.addEventListener('click', async function() {
@@ -131,12 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (laptopAlias !== 'all') {
                         updatePendingCommandInUI(laptopAlias, "START_SCAN", scanType);
                     } else {
-                        setTimeout(() => window.location.reload(), 1500); // Bei "all" die Seite neu laden
+                        // Bei "all" die Seite neu laden, um alle Updates zu sehen
+                        showStatusMessage(`Erfolg: ${result.message}. Seite wird neu geladen...`, 'success');
+                        setTimeout(() => window.location.reload(), 1500); 
                     }
                 } else {
                     showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
+                console.error("Scan-Button Fehler:", error);
                 showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
             } finally {
                 setTimeout(() => disableAllActionButtons(false), 1500);
@@ -144,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Funktion zum Anhängen von Cancel-Listenern (wird für dynamisch erstellte Buttons benötigt)
+    // Funktion zum Anhängen von Cancel-Listenern
     function attachCancelListener(button) {
         button.addEventListener('click', async function() {
             const laptopAlias = this.dataset.laptopAlias;
@@ -160,26 +163,28 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatusMessage(`Breche Befehl(e) ab für ${isForAll ? 'ALLE Laptops' : laptopAlias}...`, 'info');
 
             try {
-                const response = await fetch(apiUrl, { method: 'POST' }); // Kein Body nötig
+                const response = await fetch(apiUrl, { method: 'POST' }); 
                 const result = await response.json();
                 if (response.ok) {
                     showStatusMessage(`Erfolg: ${result.message}`, 'success');
                     if (!isForAll) {
                         updatePendingCommandInUI(laptopAlias, null, null);
                     } else {
+                        showStatusMessage(`Erfolg: ${result.message}. Seite wird neu geladen...`, 'success');
                         setTimeout(() => window.location.reload(), 1500);
                     }
                 } else {
                     showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
+                console.error("Cancel-Command Fehler:", error);
                 showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
             } finally {
                 setTimeout(() => disableAllActionButtons(false), 1500);
             }
         });
     }
-    // Ursprüngliche Cancel-Buttons
+    // Ursprüngliche Cancel-Buttons (beim Laden der Seite vorhanden)
     document.querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
 
 
@@ -197,23 +202,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const response = await fetch(apiUrl, { method: 'DELETE' });
-                // DELETE gibt oft 204 No Content zurück, daher nicht unbedingt .json()
-                if (response.ok) { // 200-299
+                if (response.ok) { // HTTP 204 No Content ist auch response.ok
                     showStatusMessage(`Laptop ${laptopAlias} erfolgreich gelöscht.`, 'success');
                     document.getElementById(`laptop-row-${laptopAlias}`)?.remove();
-                     // Wenn keine Laptops mehr da sind, Meldung anzeigen (optional)
-                    if (document.querySelectorAll('table tbody tr').length === 0) {
+                    if (document.querySelectorAll('table.sortable-theme-bootstrap tbody tr').length === 0) {
                         const mainContent = document.querySelector('main');
                         const noLaptopsMsg = document.createElement('p');
                         noLaptopsMsg.textContent = 'Keine Laptops registriert.';
-                        document.querySelector('table')?.remove(); // Tabelle entfernen
-                        mainContent.insertBefore(noLaptopsMsg, mainContent.querySelector('hr')); // Vor den globalen Aktionen
+                        document.querySelector('table.sortable-theme-bootstrap')?.remove(); 
+                        if(mainContent) { // Stelle sicher, dass mainContent existiert
+                           const hrElement = mainContent.querySelector('hr');
+                           if (hrElement) {
+                               mainContent.insertBefore(noLaptopsMsg, hrElement);
+                           } else {
+                               mainContent.appendChild(noLaptopsMsg); // Fallback
+                           }
+                        }
                     }
                 } else {
-                    const result = await response.json().catch(() => ({ detail: `Fehler ${response.status} ${response.statusText}` }));
+                    const result = await response.json().catch(() => ({ detail: `Fehler ${response.status} ${response.statusText || '(Keine weitere Info)'}` }));
                     showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
+                console.error("Delete-Laptop Fehler:", error);
                 showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
             } finally {
                 setTimeout(() => disableAllActionButtons(false), 1500);
@@ -221,6 +232,67 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- Export-Funktionen für Tagesbericht ---
+    // Der CSV-Export wird nun serverseitig über einen Link gesteuert.
+    // Der entsprechende Javascript-Code wurde entfernt.
+
+    // Der PDF-Export bleibt clientseitig:
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const reportTable = document.getElementById('daily-report-table');
+
+    if (exportPdfBtn && reportTable && window.jspdf && window.jspdf.jsPDF) {
+        exportPdfBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: "landscape" }); // Querformat für breitere Tabellen
+            
+            const reportTitle = document.querySelector('main h2')?.textContent || "ScanOp Tagesbericht";
+            doc.setFontSize(18);
+            doc.text(reportTitle, 14, 20);
+            doc.setFontSize(11); // Reset für Tabelleninhalt
+
+            const tableData = [];
+            const headers = [];
+            reportTable.querySelectorAll('thead th').forEach(th => headers.push(th.textContent.trim()));
+            tableData.push(headers);
+
+            reportTable.querySelectorAll('tbody tr').forEach(row => {
+                const rowData = [];
+                row.querySelectorAll('td').forEach(cell => {
+                    let cellText = cell.textContent.trim();
+                     if (cell.classList.contains('date-cell') && cell.dataset.utcTime) {
+                        cellText = formatUtcToLocalDateTime(cell.dataset.utcTime);
+                    }
+                    rowData.push(cellText);
+                });
+                tableData.push(rowData);
+            });
+            
+            doc.autoTable({
+                head: [tableData[0]], // Nur die Header-Zeile für den Kopf
+                body: tableData.slice(1), // Rest für den Body
+                startY: 30,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [245, 245, 245] },
+            });
+
+            let reportDateStr = 'bericht';
+            const reportDateElement = document.querySelector('main h2');
+            if (reportDateElement && reportDateElement.textContent.includes(' am ')) {
+                reportDateStr = reportDateElement.textContent.split(' am ')[1] || 'bericht';
+            }
+            doc.save(`scanop_tagesbericht_${reportDateStr.replace(/\./g, '-')}.pdf`);
+        });
+    } else if (exportPdfBtn) {
+        console.warn("jsPDF oder jsPDF-AutoTable nicht geladen. PDF-Export nicht verfügbar.");
+        exportPdfBtn.disabled = true;
+        exportPdfBtn.title = "PDF-Bibliothek nicht geladen";
+    }
+    
+    // Initial Datumsformatierung aufrufen (wenn relevante Tabellen da sind)
+    if (document.querySelector('table.sortable-theme-bootstrap') || document.getElementById('daily-report-table')) {
+        convertTableDateTimes();
+    }
 
     // Auto-Refresh Polling
     let lastKnownUpdateTime = null; 
@@ -230,7 +302,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function checkForUpdates() {
         try {
             const response = await fetch('/api/v1/reports/last_update_timestamp');
-            if (!response.ok) { scheduleNextCheck(); return; }
+            if (!response.ok) { 
+                console.warn(`Polling: Fehler beim Abrufen des Update-Status (${response.status})`);
+                scheduleNextCheck(); 
+                return; 
+            }
             const data = await response.json();
 
             if (data.last_update) {
@@ -243,12 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; 
                 }
             } else if (lastKnownUpdateTime !== null && data.last_update === null) {
-                showStatusMessage('Änderungen bei Reports erkannt. Seite wird aktualisiert...', 'info');
+                showStatusMessage('Änderungen bei Reports erkannt (möglicherweise gelöscht). Seite wird aktualisiert...', 'info');
                 if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
                 setTimeout(() => window.location.reload(), 2000);
                 return;
             }
-        } catch (error) { /* Fehler still behandeln, um Polling nicht zu unterbrechen */ }
+        } catch (error) { 
+            console.error('Polling-Fehler:', error);
+        }
         scheduleNextCheck();
     }
 
@@ -257,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pollingTimeoutId = setTimeout(checkForUpdates, POLLING_INTERVAL);
     }
 
-    if (document.querySelector('table[data-sortable]')) { // Nur auf Laptop-Übersicht pollen
-       scheduleNextCheck();
+    // Polling nur starten, wenn wir auf der Laptop-Übersicht sind
+    if (document.querySelector('table.sortable-theme-bootstrap')) {
+       setTimeout(checkForUpdates, 5000); // Erster Check etwas verzögert
     }
 });

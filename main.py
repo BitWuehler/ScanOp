@@ -8,12 +8,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func 
 from datetime import date, datetime, timezone, timedelta
 import io
-import csv # Für serverseitigen CSV-Export, falls wir das später wollen
+import csv
 
 # API Router und App-Module
 from app.api.endpoints import laptops, reports, commands
 from app.database import get_db
-from app import crud, models, schemas # schemas importieren
+from app import crud, models, schemas
 
 # Basispfad des Projekts (wo main.py liegt)
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent
@@ -22,13 +22,11 @@ app = FastAPI(
     title="Willkommen zu ScanOp!",
     description="API zur Steuerung und Überwachung von Virenscans auf Client-Laptops.",
     version="0.1.0",
-    # Uvicorn --proxy-headers wird für HTTPS hinter Reverse Proxy benötigt
 )
 
 STATIC_FILES_DIR = PROJECT_ROOT_DIR / "static"
 TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
 
-# Sicherstellen, dass die Verzeichnisse existieren (optional, aber gutes Debugging)
 if not STATIC_FILES_DIR.is_dir():
     print(f"WARNUNG: Static-Verzeichnis nicht gefunden: {STATIC_FILES_DIR} (erwartet neben main.py)")
 if not TEMPLATES_DIR.is_dir():
@@ -39,6 +37,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 
 # --- Web-Routen für das Interface ---
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root_html(request: Request):
     return templates.TemplateResponse("index.html", {
@@ -48,7 +47,7 @@ async def read_root_html(request: Request):
 
 @app.get("/dashboard/laptops", response_class=HTMLResponse)
 async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
-    all_laptops_db = crud.get_laptops(db=db, limit=10000) # Erhöhe Limit für Übersicht
+    all_laptops_db = crud.get_laptops(db=db, limit=10000)
     
     laptops_with_status = []
     now_utc = datetime.now(timezone.utc)
@@ -59,9 +58,8 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
         last_scan_time_val = laptop_instance.last_scan_time
         last_scan_threats_found_val = laptop_instance.last_scan_threats_found
 
+        # Pylance-Korrektur: Expliziter `is not None` Check
         if last_scan_time_val is not None:
-            # Sicherstellen, dass last_scan_time_val offset-aware (UTC) ist
-            # (Sollte durch DB-Modell schon so sein, aber als Absicherung)
             if last_scan_time_val.tzinfo is None or last_scan_time_val.tzinfo.utcoffset(last_scan_time_val) is None:
                 last_scan_time_val = last_scan_time_val.replace(tzinfo=timezone.utc)
             else:
@@ -71,7 +69,7 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
 
             if last_scan_threats_found_val is True:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
-            elif time_since_last_scan <= timedelta(hours=5): # 5-Stunden-Regel
+            elif time_since_last_scan <= timedelta(hours=5):
                 status_info = {"text": "OK (aktuell)", "color_class": "status-green"}
             else: 
                 status_info = {"text": "OK (älter als 5h)", "color_class": "status-yellow"}
@@ -79,7 +77,7 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
             status_info = {"text": "Kein Scan bisher", "color_class": "status-white"}
 
         laptops_with_status.append({
-            "db_data": laptop_instance, # Für Zugriff auf alle Laptop-Attribute im Template
+            "db_data": laptop_instance,
             "scan_status": status_info
         })
 
@@ -89,8 +87,10 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
         "title": "Laptop Übersicht"
     })
 
-@app.get("/dashboard/daily_report", response_class=HTMLResponse)
-async def web_daily_report(
+
+# KORREKTUR: Die Export-Funktion wird direkt vor der Funktion platziert, die sie im Template aufruft.
+@app.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
+async def export_daily_report_csv(
     request: Request,
     report_date_str: str | None = None, 
     db: Session = Depends(get_db)
@@ -99,9 +99,99 @@ async def web_daily_report(
     if report_date_str:
         try:
             target_date = date.fromisoformat(report_date_str)
-        except ValueError:
-            # Fallback auf heute bei ungültigem Format, mit Meldung (oder Fehler werfen)
-            # Hier einfacher: Fallback mit Hinweis im Titel
+        except (ValueError, TypeError):
+            target_date = date.today()
+    else:
+        target_date = date.today()
+
+    all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    report_data = []
+    now_utc = datetime.now(timezone.utc)
+
+    for laptop in all_laptops_db:
+        status_text = "N/A"
+        scan_time_for_report_display = "N/A"
+        scan_result_display = "N/A"
+        threats_found_display = "N/A"
+        
+        if laptop.last_scan_time is not None:
+            last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
+            scan_time_for_report_display = last_scan_time_aware.strftime('%Y-%m-%d %H:%M:%S UTC')
+            scan_result_display = laptop.last_scan_result_message or "Keine Details"
+            
+            if laptop.last_scan_threats_found is True:
+                threats_found_display = "Ja"
+                status_text = "Bedrohung(en)!"
+            elif laptop.last_scan_threats_found is False:
+                threats_found_display = "Nein"
+                if (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
+                    status_text = "OK (Scan heute)"
+                elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
+                    status_text = "OK (Scan <24h)"
+                else:
+                    status_text = "OK (Scan älter)"
+            else:
+                 threats_found_display = "Unbekannt"
+                 status_text = "OK (Status unklar)"
+        else:
+            status_text = "Kein Scan bisher"
+
+        report_data.append({
+            "alias_name": laptop.alias_name,
+            "hostname": laptop.hostname,
+            "last_scan_time_display": scan_time_for_report_display,
+            "last_scan_result": scan_result_display,
+            "threats_found": threats_found_display,
+            "status_text": status_text,
+        })
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+    header = ["Alias", "Hostname", "Letzter Scan (UTC)", "Scan Ergebnis", "Bedrohungen gefunden", "Status"]
+    writer.writerow(header)
+
+    for laptop_report in report_data:
+        writer.writerow([
+            laptop_report["alias_name"],
+            laptop_report["hostname"],
+            laptop_report["last_scan_time_display"],
+            laptop_report["last_scan_result"],
+            laptop_report["threats_found"],
+            laptop_report["status_text"]
+        ])
+
+    output.seek(0)
+    
+    csv_filename = f"scanop_tagesbericht_{target_date.strftime('%Y-%m-%d')}.csv"
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{csv_filename}\""
+    }
+    
+    bom = "\ufeff".encode("utf-8")
+    
+    return StreamingResponse(
+        iter([bom + output.getvalue().encode("utf-8")]),
+        media_type="text/csv",
+        headers=headers
+    )
+
+
+@app.get("/dashboard/daily_report", response_class=HTMLResponse)
+async def web_daily_report(
+    request: Request,
+    report_date_str: str | None = None, 
+    db: Session = Depends(get_db)
+):
+    target_date: date
+    report_title: str
+
+    # Pylance-Korrektur: Sicherstellen, dass report_title in allen Pfaden zugewiesen wird.
+    if report_date_str:
+        try:
+            target_date = date.fromisoformat(report_date_str)
+            report_title = f"Tagesbericht für {target_date.strftime('%d.%m.%Y')}"
+        except (ValueError, TypeError):
             target_date = date.today()
             report_title = f"Tagesbericht für HEUTE ({target_date.strftime('%d.%m.%Y')}) - Ungültiges Datum angegeben"
     else:
@@ -120,18 +210,9 @@ async def web_daily_report(
         threats_found_for_report = None
         color_class = "status-white"
 
-        # Hier könnten wir komplexere Logik einbauen, um den relevantesten Scan für `target_date` zu finden.
-        # Fürs Erste: Wir zeigen den letzten bekannten Scan-Status des Laptops an.
-        # Der "Tagesbericht" ist dann eher ein "Status aller Laptops am Zieldatum (basierend auf letztem Scan)".
-        
-        if laptop.last_scan_time:
-            # Sicherstellen, dass es aware ist für Vergleiche
-            last_scan_time_aware = laptop.last_scan_time
-            if last_scan_time_aware.tzinfo is None: # Sollte nicht passieren
-                last_scan_time_aware = last_scan_time_aware.replace(tzinfo=timezone.utc)
-            else:
-                last_scan_time_aware = last_scan_time_aware.astimezone(timezone.utc)
-
+        # Pylance-Korrektur: Expliziter `is not None` Check
+        if laptop.last_scan_time is not None:
+            last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
             scan_time_for_report_utc_iso = last_scan_time_aware.isoformat()
             scan_time_for_report_display = last_scan_time_aware.strftime('%Y-%m-%d %H:%M:%S UTC')
             scan_result_display = laptop.last_scan_result_message or "Keine Details"
@@ -140,13 +221,10 @@ async def web_daily_report(
             if threats_found_for_report is True:
                 status_text = "Bedrohung(en)!"
                 color_class = "status-red"
-            # Für den Tagesbericht könnte die 5-Stunden-Regel weniger relevant sein,
-            # wichtiger ist, ob an diesem Tag ein "sauberer" Scan lief.
-            # Die aktuelle Logik zeigt den letzten Status.
-            elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1) : # Scan von heute und innerhalb 24h
+            elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1) :
                 status_text = "OK (Scan heute)"
                 color_class = "status-green"
-            elif (now_utc - last_scan_time_aware) <= timedelta(days=1): # Scan innerhalb 24h
+            elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
                  status_text = "OK (Scan <24h)"
                  color_class = "status-green"
             else:
@@ -156,44 +234,40 @@ async def web_daily_report(
             status_text = "Kein Scan bisher"
             color_class = "status-white"
 
-
         report_data.append({
             "alias_name": laptop.alias_name,
             "hostname": laptop.hostname,
             "last_scan_time_utc": scan_time_for_report_utc_iso,
             "last_scan_time_display": scan_time_for_report_display,
             "last_scan_result": scan_result_display,
-            "threats_found": threats_found_for_report, # Kann None, True, False sein
+            "threats_found": threats_found_for_report,
             "status_text": status_text,
             "status_color_class": color_class
         })
 
     return templates.TemplateResponse("daily_report.html", {
         "request": request,
-        "report_date_iso": target_date.isoformat(), # Für das Formularfeld
-        "report_date_display": target_date.strftime('%d.%m.%Y'), # Für die Überschrift
+        "report_date_iso": target_date.isoformat(),
+        "report_date_display": target_date.strftime('%d.%m.%Y'),
         "laptops_report_data": report_data,
         "title": report_title
     })
 
 
-# --- API Endpunkte (bleiben wie sie sind) ---
+# --- API Endpunkte ---
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "message": "API ist betriebsbereit."}
 
-# Einbinden der API-Router
 app.include_router(laptops.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(commands.router, prefix="/api/v1")
 
-# API-Endpunkt für den Update-Check (für Polling der Laptop-Übersicht)
 @app.get("/api/v1/reports/last_update_timestamp", include_in_schema=False)
 async def get_last_report_timestamp(db: Session = Depends(get_db)):
     last_report_time_db = db.query(func.max(models.ScanReport.report_time_on_server)).scalar()
     
     if last_report_time_db is not None:
-        # Sicherstellen, dass es aware ist, bevor isoformat aufgerufen wird
         if last_report_time_db.tzinfo is None or last_report_time_db.tzinfo.utcoffset(last_report_time_db) is None:
             last_report_time_db = last_report_time_db.replace(tzinfo=timezone.utc)
         else:

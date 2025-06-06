@@ -20,16 +20,21 @@
         <div style="margin-top: 10px;">
             <form method="get" action="{{ url_for('web_daily_report') }}">
                 <label for="report_date_str">Datum für Bericht (YYYY-MM-DD):</label>
-                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date }}" placeholder="YYYY-MM-DD">
+                <!-- In der Vorlage war hier 'report_date', es sollte 'report_date_iso' sein, um den Wert korrekt zu übernehmen -->
+                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}" placeholder="YYYY-MM-DD">
                 <button type="submit">Bericht anzeigen</button>
             </form>
         </div>
     </header>
     <main>
-        <h2>Laptop-Status am {{ report_date }}</h2>
+        <!-- In der Vorlage war hier 'report_date', es sollte 'report_date_display' für die Anzeige sein -->
+        <h2>Laptop-Status am {{ report_date_display }}</h2>
         
         <div style="margin-bottom: 20px; margin-top: 20px;">
-            <button id="export-csv-btn">Als CSV exportieren</button>
+            <!-- ===== HIER IST DIE KORREKTUR ===== -->
+            <a href="{{ url_for('export_daily_report_csv') }}?report_date_str={{ report_date_iso }}" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
+            <!-- ===== ENDE DER KORREKTUR ===== -->
+            
             <button id="export-pdf-btn">Als PDF exportieren</button>
         </div>
 
@@ -72,7 +77,7 @@
         {% endif %}
     </main>
     <footer>
-        <p>© 2024 ScanOp</p>
+        <p>© 2025 ScanOp - Jonas Thiebes</p>
     </footer>
     <!-- jsPDF und jsPDF-AutoTable (für PDF-Export) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
