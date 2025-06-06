@@ -9,6 +9,7 @@ from sqlalchemy import func
 from datetime import date, datetime, timezone, timedelta
 import io
 import csv
+from typing import cast # Import für explizites Type-Casting
 
 # API Router und App-Module
 from app.api.endpoints import laptops, reports, commands
@@ -29,30 +30,18 @@ TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
 app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# =================================================================================
-# NEUE, ZENTRALE HILFSFUNKTION FÜR KORREKTE UTC-ISO-STRINGS
-# =================================================================================
 def to_utc_iso_string(dt: datetime | None) -> str:
-    """
-    Nimmt ein datetime-Objekt und gibt einen standardkonformen ISO-8601-String
-    in UTC zurück, der garantiert mit 'Z' endet.
-    """
     if dt is None:
         return ""
-    # Sicherstellen, dass das Objekt 'aware' ist (eine Zeitzone hat)
     if dt.tzinfo is None:
         dt_utc = dt.replace(tzinfo=timezone.utc)
     else:
         dt_utc = dt.astimezone(timezone.utc)
-    # .isoformat() erzeugt bei UTC nicht immer 'Z'. Wir ersetzen +00:00.
     return dt_utc.isoformat().replace('+00:00', 'Z')
 
-# Registriere die Hilfsfunktion als globale Funktion für alle Jinja2-Templates
 templates.env.globals['to_utc_iso'] = to_utc_iso_string
-# =================================================================================
 
 # --- Web-Routen für das Interface ---
-# (Der Rest der Datei bleibt strukturell gleich, profitiert aber von der neuen Logik)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root_html(request: Request):
@@ -68,7 +57,8 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
         if laptop_instance.last_scan_time is not None:
             last_scan_time_aware = laptop_instance.last_scan_time.astimezone(timezone.utc)
             time_since_last_scan = now_utc - last_scan_time_aware
-            if laptop_instance.last_scan_threats_found:
+            # KORREKTUR: Expliziter Vergleich mit `is True` für Pylance
+            if laptop_instance.last_scan_threats_found is True:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
             elif time_since_last_scan <= timedelta(hours=5):
                 status_info = {"text": "OK (aktuell)", "color_class": "status-green"}
@@ -82,7 +72,6 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
 async def export_daily_report_csv(request: Request, report_date_str: str | None = None, db: Session = Depends(get_db)):
-    # ... (Diese Funktion bleibt unverändert, da sie explizit UTC ausgibt)
     target_date: date
     if report_date_str:
         try: target_date = date.fromisoformat(report_date_str)
@@ -93,13 +82,15 @@ async def export_daily_report_csv(request: Request, report_date_str: str | None 
     now_utc = datetime.now(timezone.utc)
     for laptop in all_laptops_db:
         status_text, scan_result_display, threats_found_display = "N/A", "N/A", "N/A"
-        scan_time_for_report_display = to_utc_iso_string(laptop.last_scan_time) if laptop.last_scan_time else "N/A"
+        # KORREKTUR: Expliziter Check `is not None` und `cast` für Pylance
+        scan_time_for_report_display = to_utc_iso_string(cast(datetime | None, laptop.last_scan_time)) if laptop.last_scan_time is not None else "N/A"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
             scan_result_display = laptop.last_scan_result_message or "Keine Details"
-            if laptop.last_scan_threats_found:
+            # KORREKTUR: Explizite Vergleiche
+            if laptop.last_scan_threats_found is True:
                 threats_found_display, status_text = "Ja", "Bedrohung(en)!"
-            elif not laptop.last_scan_threats_found:
+            elif laptop.last_scan_threats_found is False:
                 threats_found_display = "Nein"
                 if (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1): status_text = "OK (Scan heute)"
                 elif (now_utc - last_scan_time_aware) <= timedelta(days=1): status_text = "OK (Scan <24h)"
@@ -138,7 +129,8 @@ async def web_daily_report(request: Request, report_date_str: str | None = None,
         status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
-            if laptop.last_scan_threats_found:
+            # KORREKTUR: Expliziter Vergleich
+            if laptop.last_scan_threats_found is True:
                 status_text, color_class = "Bedrohung(en)!", "status-red"
             elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
                 status_text, color_class = "OK (Scan heute)", "status-green"
