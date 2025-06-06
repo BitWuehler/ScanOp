@@ -59,44 +59,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ====================================================================
-    // NEUE, ROBUSTE ZEITUMWANDLUNG MITTELS DAY.JS
-    // ====================================================================
-    function convertTableDateTimes() {
-        // Prüfen, ob die Day.js-Bibliothek geladen wurde
-        if (typeof dayjs === 'undefined') {
-            console.error("Day.js wurde nicht geladen! Zeitumwandlung kann nicht stattfinden.");
-            // Optional: Zeige einen Fehler im UI
-            document.querySelectorAll('td.date-cell').forEach(cell => {
-                cell.textContent = 'Fehler: Zeit-Lib fehlt';
-            });
-            return;
+    function formatUtcToLocalDateTime(utcDateString) {
+        if (!utcDateString || utcDateString.trim() === '') {
+            return 'N/A';
         }
+        try {
+            const date = new Date(utcDateString);
+            if (isNaN(date.getTime())) {
+                return 'Ungült. Datum';
+            }
+            const options = {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            };
+            return date.toLocaleString(undefined, options);
+        } catch (e) {
+            console.error("Error formatting date:", utcDateString, e);
+            return utcDateString;
+        }
+    }
 
+    function convertTableDateTimes() {
         document.querySelectorAll('td.date-cell').forEach(cell => {
-            const utcIsoString = cell.dataset.utcTime;
-
-            if (!utcIsoString) {
-                cell.textContent = 'N/A';
-                return;
-            }
-
-            // Day.js verwenden, um den UTC-String zu parsen und im lokalen Format auszugeben
-            // dayjs(utcIsoString) erkennt das ISO-Format und verarbeitet es als UTC.
-            // .format() gibt es dann in der lokalen Zeitzone des Browsers aus.
-            const localTimeString = dayjs(utcIsoString).format('DD.MM.YYYY HH:mm:ss');
-            
-            // Überprüfen, ob das Ergebnis gültig ist
-            if (localTimeString.toLowerCase().includes('invalid')) {
-                console.error("Day.js konnte das Datum nicht verarbeiten:", utcIsoString);
-                cell.textContent = 'Ungült. Datum';
-            } else {
-                cell.textContent = localTimeString;
-            }
+            const utcTime = cell.dataset.utcTime;
+            cell.textContent = formatUtcToLocalDateTime(utcTime);
         });
     }
-    // ====================================================================
-
 
     // --- Event Listeners für Buttons ---
     document.querySelectorAll('.scan-button').forEach(button => {
@@ -240,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         exportPdfBtn.title = "PDF-Bibliothek nicht geladen";
     }
     
-    // Führe die Konvertierung aus, sobald das DOM geladen ist.
     convertTableDateTimes();
 
     // Auto-Refresh Polling
@@ -250,7 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function checkForUpdates() {
         try {
-            const response = await fetch('/api/v1/reports/last_update_timestamp');
+            // KORREKTUR: Der Pfad zur Abfrage des Timestamps wurde an die neue Router-Struktur angepasst.
+            const response = await fetch('/api/v1/scanreports/last_update_timestamp');
             if (!response.ok) { 
                 console.warn(`Polling: Fehler beim Abrufen des Update-Status (${response.status})`);
                 scheduleNextCheck(); 
