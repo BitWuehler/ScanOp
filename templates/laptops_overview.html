@@ -6,6 +6,10 @@
     <title>{{ title }} - ScanOp</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/sortable-theme-bootstrap.css') }}" />
+    <!-- ======================================================= -->
+    <!-- KORREKTUR: Fehlende Day.js-Bibliothek hier hinzugefügt. -->
+    <!-- ======================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 </head>
 <body>
     <header>
@@ -14,7 +18,7 @@
             <ul>
                 <li><a href="{{ url_for('read_root_html') }}">Startseite</a></li>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
-                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht (Heute)</a></li> <!-- Link zum Tagesbericht hinzugefügt -->
+                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht (Heute)</a></li>
             </ul>
         </nav>
     </header>
@@ -30,8 +34,8 @@
                     <th>Hostname</th>
                     <th>Alias</th>
                     <th data-sorted-direction="descending">Scan Status</th>
-                    <th>Zuletzt gesehen (API Lokal)</th> <!-- Titel angepasst -->
-                    <th>Letzter Scan (Lokal)</th>      <!-- Titel angepasst -->
+                    <th>Zuletzt gesehen (Lokal)</th>
+                    <th>Letzter Scan (Lokal)</th>
                     <th>Scan Typ</th>
                     <th>Scan Ergebnis</th>
                     <th>Bedrohungen?</th>
@@ -49,14 +53,8 @@
                     <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
                         {{ item.scan_status.text }}
                     </td>
-                    <!-- ANPASSUNG FÜR DATUMSANZEIGE -->
-                    <td class="date-cell" data-utc-time="{{ laptop.last_api_contact.isoformat() if laptop.last_api_contact else '' }}">
-                        {{ laptop.last_api_contact.strftime('%Y-%m-%d %H:%M:%S UTC') if laptop.last_api_contact else 'N/A' }}
-                    </td>
-                    <td class="date-cell" data-utc-time="{{ laptop.last_scan_time.isoformat() if laptop.last_scan_time else '' }}">
-                        {{ laptop.last_scan_time.strftime('%Y-%m-%d %H:%M:%S UTC') if laptop.last_scan_time else 'N/A' }}
-                    </td>
-                    <!-- ENDE ANPASSUNG FÜR DATUMSANZEIGE -->
+                    <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></td>
+                    <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
                         {% if laptop.last_scan_result_message %}
@@ -107,9 +105,6 @@
     </footer>
 
     <script src="{{ url_for('static', path='/sortable.min.js') }}"></script>
-    <!-- jsPDF und jsPDF-AutoTable (falls benötigt, hier nur für app.js relevant, wenn es sie erwartet) -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script> -->
     <script src="{{ url_for('static', path='/app.js') }}"></script>
 </body>
 </html>

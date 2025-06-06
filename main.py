@@ -15,7 +15,6 @@ from app.api.endpoints import laptops, reports, commands
 from app.database import get_db
 from app import crud, models, schemas
 
-# Basispfad des Projekts (wo main.py liegt)
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
@@ -27,47 +26,49 @@ app = FastAPI(
 STATIC_FILES_DIR = PROJECT_ROOT_DIR / "static"
 TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
 
-if not STATIC_FILES_DIR.is_dir():
-    print(f"WARNUNG: Static-Verzeichnis nicht gefunden: {STATIC_FILES_DIR} (erwartet neben main.py)")
-if not TEMPLATES_DIR.is_dir():
-    print(f"WARNUNG: Templates-Verzeichnis nicht gefunden: {TEMPLATES_DIR} (erwartet neben main.py)")
-
 app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# =================================================================================
+# NEUE, ZENTRALE HILFSFUNKTION FÜR KORREKTE UTC-ISO-STRINGS
+# =================================================================================
+def to_utc_iso_string(dt: datetime | None) -> str:
+    """
+    Nimmt ein datetime-Objekt und gibt einen standardkonformen ISO-8601-String
+    in UTC zurück, der garantiert mit 'Z' endet.
+    """
+    if dt is None:
+        return ""
+    # Sicherstellen, dass das Objekt 'aware' ist (eine Zeitzone hat)
+    if dt.tzinfo is None:
+        dt_utc = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt_utc = dt.astimezone(timezone.utc)
+    # .isoformat() erzeugt bei UTC nicht immer 'Z'. Wir ersetzen +00:00.
+    return dt_utc.isoformat().replace('+00:00', 'Z')
+
+# Registriere die Hilfsfunktion als globale Funktion für alle Jinja2-Templates
+templates.env.globals['to_utc_iso'] = to_utc_iso_string
+# =================================================================================
 
 # --- Web-Routen für das Interface ---
+# (Der Rest der Datei bleibt strukturell gleich, profitiert aber von der neuen Logik)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root_html(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "title": "Willkommen bei ScanOp"
-    })
+    return templates.TemplateResponse("index.html", { "request": request, "title": "Willkommen bei ScanOp" })
 
 @app.get("/dashboard/laptops", response_class=HTMLResponse)
 async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
-    
     laptops_with_status = []
     now_utc = datetime.now(timezone.utc)
-
     for laptop_instance in all_laptops_db:
         status_info = {"text": "Unbekannt", "color_class": "status-unknown"} 
-        
-        last_scan_time_val = laptop_instance.last_scan_time
-        last_scan_threats_found_val = laptop_instance.last_scan_threats_found
-
-        # Pylance-Korrektur: Expliziter `is not None` Check
-        if last_scan_time_val is not None:
-            if last_scan_time_val.tzinfo is None or last_scan_time_val.tzinfo.utcoffset(last_scan_time_val) is None:
-                last_scan_time_val = last_scan_time_val.replace(tzinfo=timezone.utc)
-            else:
-                last_scan_time_val = last_scan_time_val.astimezone(timezone.utc)
-            
-            time_since_last_scan = now_utc - last_scan_time_val
-
-            if last_scan_threats_found_val is True:
+        if laptop_instance.last_scan_time is not None:
+            last_scan_time_aware = laptop_instance.last_scan_time.astimezone(timezone.utc)
+            time_since_last_scan = now_utc - last_scan_time_aware
+            if laptop_instance.last_scan_threats_found:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
             elif time_since_last_scan <= timedelta(hours=5):
                 status_info = {"text": "OK (aktuell)", "color_class": "status-green"}
@@ -75,118 +76,51 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db)):
                 status_info = {"text": "OK (älter als 5h)", "color_class": "status-yellow"}
         else:
             status_info = {"text": "Kein Scan bisher", "color_class": "status-white"}
-
-        laptops_with_status.append({
-            "db_data": laptop_instance,
-            "scan_status": status_info
-        })
-
-    return templates.TemplateResponse("laptops_overview.html", {
-        "request": request,
-        "laptops_list": laptops_with_status,
-        "title": "Laptop Übersicht"
-    })
+        laptops_with_status.append({"db_data": laptop_instance, "scan_status": status_info})
+    return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht"})
 
 
-# KORREKTUR: Die Export-Funktion wird direkt vor der Funktion platziert, die sie im Template aufruft.
 @app.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
-async def export_daily_report_csv(
-    request: Request,
-    report_date_str: str | None = None, 
-    db: Session = Depends(get_db)
-):
+async def export_daily_report_csv(request: Request, report_date_str: str | None = None, db: Session = Depends(get_db)):
+    # ... (Diese Funktion bleibt unverändert, da sie explizit UTC ausgibt)
     target_date: date
     if report_date_str:
-        try:
-            target_date = date.fromisoformat(report_date_str)
-        except (ValueError, TypeError):
-            target_date = date.today()
-    else:
-        target_date = date.today()
-
+        try: target_date = date.fromisoformat(report_date_str)
+        except (ValueError, TypeError): target_date = date.today()
+    else: target_date = date.today()
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
     report_data = []
     now_utc = datetime.now(timezone.utc)
-
     for laptop in all_laptops_db:
-        status_text = "N/A"
-        scan_time_for_report_display = "N/A"
-        scan_result_display = "N/A"
-        threats_found_display = "N/A"
-        
+        status_text, scan_result_display, threats_found_display = "N/A", "N/A", "N/A"
+        scan_time_for_report_display = to_utc_iso_string(laptop.last_scan_time) if laptop.last_scan_time else "N/A"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
-            scan_time_for_report_display = last_scan_time_aware.strftime('%Y-%m-%d %H:%M:%S UTC')
             scan_result_display = laptop.last_scan_result_message or "Keine Details"
-            
-            if laptop.last_scan_threats_found is True:
-                threats_found_display = "Ja"
-                status_text = "Bedrohung(en)!"
-            elif laptop.last_scan_threats_found is False:
+            if laptop.last_scan_threats_found:
+                threats_found_display, status_text = "Ja", "Bedrohung(en)!"
+            elif not laptop.last_scan_threats_found:
                 threats_found_display = "Nein"
-                if (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
-                    status_text = "OK (Scan heute)"
-                elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
-                    status_text = "OK (Scan <24h)"
-                else:
-                    status_text = "OK (Scan älter)"
-            else:
-                 threats_found_display = "Unbekannt"
-                 status_text = "OK (Status unklar)"
-        else:
-            status_text = "Kein Scan bisher"
-
-        report_data.append({
-            "alias_name": laptop.alias_name,
-            "hostname": laptop.hostname,
-            "last_scan_time_display": scan_time_for_report_display,
-            "last_scan_result": scan_result_display,
-            "threats_found": threats_found_display,
-            "status_text": status_text,
-        })
-    
+                if (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1): status_text = "OK (Scan heute)"
+                elif (now_utc - last_scan_time_aware) <= timedelta(days=1): status_text = "OK (Scan <24h)"
+                else: status_text = "OK (Scan älter)"
+            else: threats_found_display, status_text = "Unbekannt", "OK (Status unklar)"
+        else: status_text = "Kein Scan bisher"
+        report_data.append({"alias_name": laptop.alias_name, "hostname": laptop.hostname, "last_scan_time_display": scan_time_for_report_display, "last_scan_result": scan_result_display, "threats_found": threats_found_display, "status_text": status_text})
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-    header = ["Alias", "Hostname", "Letzter Scan (UTC)", "Scan Ergebnis", "Bedrohungen gefunden", "Status"]
-    writer.writerow(header)
-
-    for laptop_report in report_data:
-        writer.writerow([
-            laptop_report["alias_name"],
-            laptop_report["hostname"],
-            laptop_report["last_scan_time_display"],
-            laptop_report["last_scan_result"],
-            laptop_report["threats_found"],
-            laptop_report["status_text"]
-        ])
-
+    writer.writerow(["Alias", "Hostname", "Letzter Scan (UTC)", "Scan Ergebnis", "Bedrohungen gefunden", "Status"])
+    for r in report_data: writer.writerow([r["alias_name"], r["hostname"], r["last_scan_time_display"], r["last_scan_result"], r["threats_found"], r["status_text"]])
     output.seek(0)
-    
     csv_filename = f"scanop_tagesbericht_{target_date.strftime('%Y-%m-%d')}.csv"
-    headers = {
-        "Content-Disposition": f"attachment; filename=\"{csv_filename}\""
-    }
-    
-    bom = "\ufeff".encode("utf-8")
-    
-    return StreamingResponse(
-        iter([bom + output.getvalue().encode("utf-8")]),
-        media_type="text/csv",
-        headers=headers
-    )
+    headers = { "Content-Disposition": f"attachment; filename=\"{csv_filename}\"" }
+    return StreamingResponse(iter([b'\xef\xbb\xbf' + output.getvalue().encode("utf-8")]), media_type="text/csv", headers=headers)
 
 
 @app.get("/dashboard/daily_report", response_class=HTMLResponse)
-async def web_daily_report(
-    request: Request,
-    report_date_str: str | None = None, 
-    db: Session = Depends(get_db)
-):
+async def web_daily_report(request: Request, report_date_str: str | None = None, db: Session = Depends(get_db)):
     target_date: date
     report_title: str
-
-    # Pylance-Korrektur: Sicherstellen, dass report_title in allen Pfaden zugewiesen wird.
     if report_date_str:
         try:
             target_date = date.fromisoformat(report_date_str)
@@ -197,61 +131,25 @@ async def web_daily_report(
     else:
         target_date = date.today()
         report_title = f"Tagesbericht für {target_date.strftime('%d.%m.%Y')}"
-
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
     report_data = []
     now_utc = datetime.now(timezone.utc)
-
     for laptop in all_laptops_db:
-        status_text = "N/A"
-        scan_time_for_report_utc_iso = None
-        scan_time_for_report_display = "N/A"
-        scan_result_display = "N/A"
-        threats_found_for_report = None
-        color_class = "status-white"
-
-        # Pylance-Korrektur: Expliziter `is not None` Check
+        status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
-            scan_time_for_report_utc_iso = last_scan_time_aware.isoformat()
-            scan_time_for_report_display = last_scan_time_aware.strftime('%Y-%m-%d %H:%M:%S UTC')
-            scan_result_display = laptop.last_scan_result_message or "Keine Details"
-            threats_found_for_report = laptop.last_scan_threats_found
-
-            if threats_found_for_report is True:
-                status_text = "Bedrohung(en)!"
-                color_class = "status-red"
-            elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1) :
-                status_text = "OK (Scan heute)"
-                color_class = "status-green"
+            if laptop.last_scan_threats_found:
+                status_text, color_class = "Bedrohung(en)!", "status-red"
+            elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
+                status_text, color_class = "OK (Scan heute)", "status-green"
             elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
-                 status_text = "OK (Scan <24h)"
-                 color_class = "status-green"
+                status_text, color_class = "OK (Scan <24h)", "status-green"
             else:
-                status_text = "OK (Scan älter)"
-                color_class = "status-yellow"
+                status_text, color_class = "OK (Scan älter)", "status-yellow"
         else:
-            status_text = "Kein Scan bisher"
-            color_class = "status-white"
-
-        report_data.append({
-            "alias_name": laptop.alias_name,
-            "hostname": laptop.hostname,
-            "last_scan_time_utc": scan_time_for_report_utc_iso,
-            "last_scan_time_display": scan_time_for_report_display,
-            "last_scan_result": scan_result_display,
-            "threats_found": threats_found_for_report,
-            "status_text": status_text,
-            "status_color_class": color_class
-        })
-
-    return templates.TemplateResponse("daily_report.html", {
-        "request": request,
-        "report_date_iso": target_date.isoformat(),
-        "report_date_display": target_date.strftime('%d.%m.%Y'),
-        "laptops_report_data": report_data,
-        "title": report_title
-    })
+            status_text, color_class = "Kein Scan bisher", "status-white"
+        report_data.append({"db_data": laptop, "status_text": status_text, "status_color_class": color_class})
+    return templates.TemplateResponse("daily_report.html", {"request": request, "report_date_iso": target_date.isoformat(), "report_date_display": target_date.strftime('%d.%m.%Y'), "laptops_report_data": report_data, "title": report_title})
 
 
 # --- API Endpunkte ---
@@ -266,11 +164,7 @@ app.include_router(commands.router, prefix="/api/v1")
 @app.get("/api/v1/reports/last_update_timestamp", include_in_schema=False)
 async def get_last_report_timestamp(db: Session = Depends(get_db)):
     last_report_time_db = db.query(func.max(models.ScanReport.report_time_on_server)).scalar()
-    
     if last_report_time_db is not None:
-        if last_report_time_db.tzinfo is None or last_report_time_db.tzinfo.utcoffset(last_report_time_db) is None:
-            last_report_time_db = last_report_time_db.replace(tzinfo=timezone.utc)
-        else:
-            last_report_time_db = last_report_time_db.astimezone(timezone.utc)
-        return {"last_update": last_report_time_db.isoformat()}
+        last_report_time_aware = last_report_time_db.astimezone(timezone.utc)
+        return {"last_update": last_report_time_aware.isoformat()}
     return {"last_update": None}
