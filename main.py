@@ -1,15 +1,15 @@
 # main.py
-from fastapi import FastAPI, Request, Form, status, APIRouter # KORREKTUR: APIRouter hier hinzugefügt
+from fastapi import FastAPI, Request, Form, status, APIRouter
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from datetime import datetime, timezone
+from typing import Union, Optional # KORREKTUR: Union und Optional importieren
 
 from pathlib import Path
 from app.config import settings
 from app.auth import verify_password
-# WICHTIG: Die Router werden importiert
 from app.api.endpoints import laptops, reports, commands
 from app.web_routes import router as web_router
 
@@ -23,7 +23,8 @@ app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR), name="static")
 
 templates_for_login = Jinja2Templates(directory=TEMPLATES_DIR)
 
-def to_utc_iso_string(dt: datetime | None) -> str:
+# KORREKTUR: `datetime | None` wird zu `Union[datetime, None]`
+def to_utc_iso_string(dt: Union[datetime, None]) -> str:
     if dt is None: return ""
     if dt.tzinfo is None: dt_utc = dt.replace(tzinfo=timezone.utc)
     else: dt_utc = dt.astimezone(timezone.utc)
@@ -50,13 +51,10 @@ async def logout(request: Request):
 
 
 # --- Einbinden der Router ---
-# Ein Haupt-Router für die gesamte v1 API
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(laptops.router)
 api_v1_router.include_router(reports.router)
 api_v1_router.include_router(commands.router)
 
 app.include_router(api_v1_router)
-
-# Geschützte Web-Seiten
 app.include_router(web_router)

@@ -7,46 +7,42 @@ from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 import io
 import csv
+from typing import Union, Optional # KORREKTUR: Union und Optional importieren
 
 from app.database import get_db
 from app import crud
 from app.auth import get_current_user_or_none 
 
 # --- Konfiguration für diesen Router ---
-# Jede Router-Datei kann ihre eigenen Abhängigkeiten und Konfigurationen haben.
-PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent # Ein Verzeichnis nach oben, um zum Projekt-Root zu kommen
+PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Wir definieren die Hilfsfunktion hier erneut oder importieren sie aus einem
-# separaten "utils.py"-Modul. Für Einfachheit definieren wir sie hier.
-def to_utc_iso_string(dt: datetime | None) -> str:
+# KORREKTUR: `datetime | None` wird zu `Union[datetime, None]`
+def to_utc_iso_string(dt: Union[datetime, None]) -> str:
     if dt is None: return ""
     if dt.tzinfo is None: dt_utc = dt.replace(tzinfo=timezone.utc)
     else: dt_utc = dt.astimezone(timezone.utc)
     return dt_utc.isoformat().replace('+00:00', 'Z')
-
-# Die Funktion wird für die Templates in diesem Router verfügbar gemacht.
 templates.env.globals['to_utc_iso'] = to_utc_iso_string
 
 
 # --- Router-Definition mit Schutzmechanismus ---
 router = APIRouter()
 
-# Wichtige Hilfsfunktion, um die Weiterleitung durchzuführen
-async def check_auth(user: str | None) -> RedirectResponse | None:
+async def check_auth(user: Optional[str]) -> Union[RedirectResponse, None]:
     if not user:
         return RedirectResponse(url="/login")
     return None
 
 @router.get("/", response_class=HTMLResponse)
-async def read_root_html(user: str | None = Depends(get_current_user_or_none)):
+async def read_root_html(user: Optional[str] = Depends(get_current_user_or_none)):
     redirect = await check_auth(user)
     if redirect: return redirect
     return RedirectResponse(url="/dashboard/laptops")
 
 @router.get("/dashboard/laptops", response_class=HTMLResponse)
-async def web_laptops_overview(request: Request, db: Session = Depends(get_db), user: str | None = Depends(get_current_user_or_none)):
+async def web_laptops_overview(request: Request, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
     redirect = await check_auth(user)
     if redirect: return redirect
         
@@ -70,18 +66,30 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
     return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht", "user": user})
 
 @router.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
-async def export_daily_report_csv(request: Request, report_date_str: str | None = None, db: Session = Depends(get_db), user: str | None = Depends(get_current_user_or_none)):
+async def export_daily_report_csv(request: Request, report_date_str: Optional[str] = None, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
     redirect = await check_auth(user)
     if redirect: return redirect
 
     target_date: date
-    # ... (restliche Logik bleibt unverändert)
-    # ...
-    # Placeholder
-    return StreamingResponse(io.BytesIO(b""), media_type="text/csv")
+    if report_date_str:
+        try: target_date = date.fromisoformat(report_date_str)
+        except (ValueError, TypeError): target_date = date.today()
+    else: target_date = date.today()
+    
+    # ... (Rest der CSV-Logik hier einfügen)
+    all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(["Alias", "Hostname", "Letzter Scan (UTC)", "Status", "Bedrohungen"])
+    for laptop in all_laptops_db:
+        writer.writerow([laptop.alias_name, laptop.hostname, to_utc_iso_string(laptop.last_scan_time), "OK", "Nein"]) # Beispiel
+    output.seek(0)
+    
+    return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8-sig')), media_type="text/csv", headers={"Content-Disposition": f"attachment;filename=scanop_tagesbericht_{target_date.isoformat()}.csv"})
+
 
 @router.get("/dashboard/daily_report", response_class=HTMLResponse)
-async def web_daily_report(request: Request, report_date_str: str | None = None, db: Session = Depends(get_db), user: str | None = Depends(get_current_user_or_none)):
+async def web_daily_report(request: Request, report_date_str: Optional[str] = None, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
     redirect = await check_auth(user)
     if redirect: return redirect
         
