@@ -1,0 +1,23 @@
+services:
+  scanop-server:
+    # Zieht das fertige Image direkt von GitHub Container Registry (GHCR)
+    image: ghcr.io/bitwuehler/scanop:latest
+    container_name: scanop-server
+    restart: unless-stopped
+    ports:
+      # Mappt Port 8000 vom Container auf Port 8000 des Hosts.
+      # Falls 8000 schon belegt ist, können Sie hier z.B. "8080:8000" eintragen.
+      - "8000:8000"
+    volumes:
+      # Verbindet den Ordner "data" auf dem Host mit dem Ordner "/app/data" im Container.
+      # Dadurch wird die Datenbankdatei persistent gespeichert und überlebt Container-Neustarts.
+      - ./data:/app/data
+    environment:
+      # Setzt die Umgebungsvariablen für die Anwendung. 
+      # Pydantic-Settings priorisiert diese über eine eventuelle .env-Datei.
+      - DATABASE_URL=sqlite:////app/data/scanop.db
+      # Fügen Sie hier Ihre geheimen Schlüssel ein:
+      - SECRET_KEY=YOUR_SUPER_SECRET_KEY_HERE
+      - APP_USERNAME=admin
+      - APP_PASSWORD=DEIN_BCRYPT_GEHASHTES_PASSWORT_HIER
+      - SERVER_API_KEY=YOUR_API_KEY_HERE

@@ -229,6 +229,43 @@ document.addEventListener('DOMContentLoaded', () => {
         exportPdfBtn.title = "PDF-Bibliothek nicht geladen";
     }
     
+    const triggerUpdateBtn = document.getElementById('trigger-update-btn');
+    if (triggerUpdateBtn) {
+        triggerUpdateBtn.addEventListener('click', async function() {
+            const targetLaptop = document.getElementById('target_laptop').value;
+            const repoUrl = document.getElementById('github_repo_url').value;
+            const version = document.getElementById('github_version').value;
+
+            if (!repoUrl || !version) {
+                showStatusMessage('Bitte Repository-URL und Version angeben.', 'error');
+                return;
+            }
+
+            const apiUrl = `/api/v1/clientcommands/trigger_update/${targetLaptop}`;
+            triggerUpdateBtn.disabled = true;
+            showStatusMessage(`Sende Update-Befehl für ${targetLaptop === 'all' ? 'ALLE Laptops' : targetLaptop}...`, 'info');
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repo_url: repoUrl, version: version })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showStatusMessage(`Erfolg: ${result.message}`, 'success');
+                } else {
+                    showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
+                }
+            } catch (error) {
+                console.error("Update-Button Fehler:", error);
+                showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
+            } finally {
+                setTimeout(() => { triggerUpdateBtn.disabled = false; }, 1500);
+            }
+        });
+    }
+
     convertTableDateTimes();
 
     // Auto-Refresh Polling

@@ -124,3 +124,11 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
             status_text, color_class = "Kein Scan bisher", "status-white"
         report_data.append({"db_data": laptop, "status_text": status_text, "status_color_class": color_class})
     return templates.TemplateResponse("daily_report.html", {"request": request, "report_date_iso": target_date.isoformat(), "report_date_display": target_date.strftime('%d.%m.%Y'), "laptops_report_data": report_data, "title": report_title, "user": user})
+
+@router.get("/dashboard/updates", response_class=HTMLResponse)
+async def web_client_updates(request: Request, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
+    redirect = await check_auth(user)
+    if redirect: return redirect
+        
+    all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    return templates.TemplateResponse("client_updates.html", {"request": request, "laptops": all_laptops_db, "title": "Client Updates", "user": user})

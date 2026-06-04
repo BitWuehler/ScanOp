@@ -21,6 +21,7 @@ class Laptop(Base):
 
     pending_command = Column(String, nullable=True)
     pending_scan_type = Column(String, nullable=True)
+    pending_command_payload = Column(Text, nullable=True)
     command_issue_time = Column(DateTime(timezone=True), nullable=True)
 
     # Beziehung zu ScanReports

@@ -89,6 +89,11 @@ class ScanReportResponse(ScanReportBase): # Ähnlich wie ScanReport, kann für e
 class ClientCommand(BaseModel):
     command: Optional[str] = None
     scan_type: Optional[str] = None
+    payload: Optional[str] = None
+
+class TriggerUpdatePayload(BaseModel):
+    repo_url: str
+    version: str = "main"
 
 class ClientCommandResponse(ClientCommand): # <--- HIER IST ES!
     # Erbt vorerst alle Felder von ClientCommand.

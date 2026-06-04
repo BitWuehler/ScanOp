@@ -13,7 +13,35 @@ Die Kommunikation zwischen Client und Server ist durch einen API-Schlüssel gesi
 -   Sichere Client-Server-Kommunikation via API-Key
 -   Einfacher Client-Installer für Windows
 
-## Server-Setup (Entwicklung)
+## Server-Setup (Docker - Empfohlen)
+
+Am einfachsten lässt sich der Server über Docker bereitstellen. Alle benötigten Umgebungsvariablen können direkt in der `docker-compose.yml` definiert werden.
+
+1. **`docker-compose.yml` herunterladen:**
+    Laden Sie sich lediglich die `docker-compose.yml` Datei auf Ihren Docker-Host herunter. Ein Klonen des kompletten Repositories ist nicht mehr nötig!
+    ```bash
+    curl -o docker-compose.yml https://raw.githubusercontent.com/BitWuehler/ScanOp/main/docker-compose.yml
+    ```
+
+2. **Umgebungsvariablen anpassen:**
+    Öffnen Sie die heruntergeladene `docker-compose.yml` und ersetzen Sie die Platzhalter (`SECRET_KEY`, `APP_PASSWORD`, `SERVER_API_KEY`) durch Ihre eigenen sicheren Werte. Das `APP_PASSWORD` muss ein Bcrypt-Hash sein.
+
+3. **Server starten:**
+    ```bash
+    docker compose up -d
+    ```
+    Docker zieht nun automatisch das fertige Image von GitHub (ghcr.io). Der Server ist unter Port `8000` erreichbar. Die Datenbank (`scanop.db`) wird sicher im Ordner `./data` abgelegt.
+
+4. **Updates installieren:**
+    Sobald eine neue Version auf GitHub veröffentlicht wird, führen Sie einfach aus:
+    ```bash
+    docker compose pull
+    docker compose up -d
+    ```
+
+---
+
+## Server-Setup (Lokale Entwicklung)
 
 1.  **Repository klonen:**
     ```bash

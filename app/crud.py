@@ -55,16 +55,18 @@ def update_laptop_contact(db: Session, laptop_identifier: str) -> Union[models.L
         db.refresh(db_laptop)
     return db_laptop
 
-def update_laptop_command(db: Session, laptop_identifier: str, command: Union[str, None], scan_type: Union[str, None] = None) -> Union[models.Laptop, None]:
+def update_laptop_command(db: Session, laptop_identifier: str, command: Union[str, None], scan_type: Union[str, None] = None, payload: Union[str, None] = None) -> Union[models.Laptop, None]:
     db_laptop = get_laptop_by_identifier(db=db, identifier=laptop_identifier)
     if db_laptop:
         db_laptop.pending_command = command
         if command: 
             db_laptop.command_issue_time = datetime.now(timezone.utc)
             db_laptop.pending_scan_type = scan_type
+            db_laptop.pending_command_payload = payload
         else:
             db_laptop.command_issue_time = None
             db_laptop.pending_scan_type = None
+            db_laptop.pending_command_payload = None
         db.commit()
         db.refresh(db_laptop)
     return db_laptop

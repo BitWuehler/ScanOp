@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - ScanOp</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>ScanOp - {{ title }}</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
+                <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
+                <li><a href="{{ url_for('web_client_updates') }}">Client Updates</a></li>
+                <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>Client Update über GitHub</h2>
+        <p>Lösen Sie hier ein Update der Client-Skripte aus. Der ausgewählte Client wird die neuen Dateien von dem angegebenen GitHub Repository herunterladen und seinen Dienst neu starten.</p>
+
+        <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        <div class="update-form-container" style="background: #2a2a2a; padding: 20px; border-radius: 8px; max-width: 600px; margin-top: 20px;">
+            <div style="margin-bottom: 15px;">
+                <label for="github_repo_url" style="display: block; margin-bottom: 5px;">GitHub Repository URL (Raw / API / oder Basis-URL):</label>
+                <input type="text" id="github_repo_url" value="https://github.com/Benutzer/ScanOp" style="width: 100%; padding: 8px;" />
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="github_version" style="display: block; margin-bottom: 5px;">Version (Branch-Name oder Tag):</label>
+                <input type="text" id="github_version" value="main" style="width: 100%; padding: 8px;" />
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="target_laptop" style="display: block; margin-bottom: 5px;">Ziel-Laptop:</label>
+                <select id="target_laptop" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555;">
+                    <option value="all">-- ALLE LAPTOPS --</option>
+                    {% for laptop in laptops %}
+                    <option value="{{ laptop.alias_name }}">{{ laptop.alias_name }} ({{ laptop.hostname }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="trigger-update-btn" class="scan-button" style="width: 100%; padding: 10px; font-size: 1.1em; background-color: #2196F3; color: white;">Update jetzt triggern</button>
+        </div>
+    </main>
+    <footer>
+        <p>© 2025 ScanOp - Jonas Thiebes</p>
+    </footer>
+
+    <script src="{{ url_for('static', path='/app.js') }}"></script>
+</body>
+</html>

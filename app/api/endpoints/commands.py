@@ -41,6 +41,8 @@ def get_client_command(laptop_identifier: str, db: Session = Depends(get_db)):
         command_to_send.command = pending_command_val
         if pending_scan_type_val:
             command_to_send.scan_type = pending_scan_type_val
+        if db_laptop.pending_command_payload:
+            command_to_send.payload = db_laptop.pending_command_payload
             
     return command_to_send
 
@@ -81,6 +83,44 @@ def trigger_scan_for_client(
         if not updated_laptop:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden.")
         return {"message": f"Scan-Befehl '{command_to_set}' (Typ: {scan_type_to_set}) für Laptop '{laptop_identifier_or_all}' gesetzt."}
+
+
+# ====================================================================
+# DIESE ROUTE IST FÜR DAS WEBINTERFACE -> LOGIN-SESSION ERFORDERLICH
+# ====================================================================
+@router.post("/trigger_update/{laptop_identifier_or_all}", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(get_current_user_or_none)])
+def trigger_update_for_client(
+    laptop_identifier_or_all: str,
+    payload: schemas.TriggerUpdatePayload = Body(...),
+    db: Session = Depends(get_db)
+):
+    command_to_set = "UPDATE_CLIENT"
+    payload_json = payload.model_dump_json()
+
+    if laptop_identifier_or_all.lower() == "all":
+        laptops_to_update: list[models.Laptop] = crud.get_laptops(db, limit=10000)
+        if not laptops_to_update:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Keine Laptops zum Triggern gefunden.")
+        count = 0
+        for laptop_item in laptops_to_update:
+            crud.update_laptop_command(
+                db=db,
+                laptop_identifier=cast(str, laptop_item.alias_name),
+                command=command_to_set,
+                payload=payload_json
+            )
+            count += 1
+        return {"message": f"Update-Befehl für {count} Laptops gesetzt."}
+    else:
+        updated_laptop = crud.update_laptop_command(
+            db=db,
+            laptop_identifier=laptop_identifier_or_all,
+            command=command_to_set,
+            payload=payload_json
+        )
+        if not updated_laptop:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden.")
+        return {"message": f"Update-Befehl für Laptop '{laptop_identifier_or_all}' gesetzt."}
 
 
 # ====================================================================
