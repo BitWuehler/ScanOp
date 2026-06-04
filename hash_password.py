@@ -1,16 +1,17 @@
-# hash_password.py
+import getpass
 from passlib.context import CryptContext
-
-# Diese Datei ist nur ein Hilfsskript und nicht Teil der Hauptanwendung.
-# Führen Sie es einmal aus, um einen Hash für Ihr gewünschtes Passwort zu erstellen.
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Geben Sie hier das Passwort ein, das Sie verwenden möchten:
-password_to_hash = "U7CWP2Xgr!Xq"
+print("--- ScanOp Passwort Hash Generator ---")
+password = getpass.getpass("Bitte geben Sie das gewünschte Passwort für das Web-Dashboard ein: ")
 
-hashed_password = pwd_context.hash(password_to_hash)
+if not password:
+    print("Fehler: Passwort darf nicht leer sein.")
+    exit(1)
 
-print("Passwort-Hash erfolgreich erstellt!")
-print("Fügen Sie diesen Hash in Ihre .env-Datei für die Variable APP_PASSWORD ein:")
-print(f"APP_PASSWORD={hashed_password}")
+hashed_password = pwd_context.hash(password)
+
+print("\nPasswort-Hash erfolgreich erstellt!")
+print("Fügen Sie diesen kompletten String in Ihre docker-compose.yml (oder .env) als APP_PASSWORD ein:\n")
+print(f"APP_PASSWORD={hashed_password}\n")
