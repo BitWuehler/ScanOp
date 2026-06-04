@@ -1,0 +1,7 @@
+{
+    "AliasName": "MeinLaptop-01",
+    "ServerBaseUrl": "https://scanop.deine-domain.de",
+    "PollingIntervalSeconds": 60,
+    "InterimCheckIntervalMinutes": 30,
+    "ApiKey": "DEIN_GEHEIMER_API_SCHLUESSEL_HIER"
+}

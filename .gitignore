@@ -15,6 +15,7 @@ ENV/
 
 # Sensible Konfiguration
 .env
+client_config.json
 
 # Editor-spezifische Ordner
 .vscode/
