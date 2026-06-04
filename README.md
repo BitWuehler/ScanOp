@@ -41,7 +41,7 @@ curl -o docker-compose.yml https://raw.githubusercontent.com/BitWuehler/ScanOp/m
 Edit the downloaded `docker-compose.yml` and set your variables:
 * `SECRET_KEY`: A random string for session security.
 * `SERVER_API_KEY`: The API key clients will use to authenticate.
-* `APP_PASSWORD`: A **Bcrypt-hash** for the web dashboard login (You can use `python hash_password.py` locally to generate one).
+* `APP_PASSWORD`: A **Bcrypt-hash** for the web dashboard login (You can use `python generate_secrets.py` locally to generate all three keys at once).
 
 ### 3. Start the Server
 Start the container:
