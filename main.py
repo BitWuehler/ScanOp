@@ -19,7 +19,7 @@ app = FastAPI(title="ScanOp")
 app.add_middleware(SessionMiddleware, secret_key=settings.secret_key)
 STATIC_FILES_DIR = PROJECT_ROOT_DIR / "static"
 TEMPLATES_DIR = PROJECT_ROOT_DIR / "templates"
-app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR), name="static")
+app.mount("/assets", StaticFiles(directory=STATIC_FILES_DIR), name="assets")
 
 templates_for_login = Jinja2Templates(directory=TEMPLATES_DIR)
 
