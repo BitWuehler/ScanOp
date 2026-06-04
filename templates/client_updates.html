@@ -24,25 +24,25 @@
 
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
-        <div class="update-form-container" style="background: #2a2a2a; padding: 20px; border-radius: 8px; max-width: 600px; margin-top: 20px;">
-            <div style="margin-bottom: 15px;">
-                <label for="github_repo_url" style="display: block; margin-bottom: 5px;">GitHub Repository URL (Raw / API / oder Basis-URL):</label>
-                <input type="text" id="github_repo_url" value="https://github.com/Benutzer/ScanOp" style="width: 100%; padding: 8px;" />
+        <div class="glass-container form-container" style="max-width: 600px; margin-top: 20px;">
+            <div style="margin-bottom: 20px;">
+                <label for="github_repo_url">GitHub Repository URL (Raw / API / oder Basis-URL):</label>
+                <input type="text" id="github_repo_url" value="https://github.com/Benutzer/ScanOp" />
             </div>
-            <div style="margin-bottom: 15px;">
-                <label for="github_version" style="display: block; margin-bottom: 5px;">Version (Branch-Name oder Tag):</label>
-                <input type="text" id="github_version" value="main" style="width: 100%; padding: 8px;" />
+            <div style="margin-bottom: 20px;">
+                <label for="github_version">Version (Branch-Name oder Tag):</label>
+                <input type="text" id="github_version" value="main" />
             </div>
-            <div style="margin-bottom: 15px;">
-                <label for="target_laptop" style="display: block; margin-bottom: 5px;">Ziel-Laptop:</label>
-                <select id="target_laptop" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555;">
+            <div style="margin-bottom: 25px;">
+                <label for="target_laptop">Ziel-Laptop:</label>
+                <select id="target_laptop">
                     <option value="all">-- ALLE LAPTOPS --</option>
                     {% for laptop in laptops %}
                     <option value="{{ laptop.alias_name }}">{{ laptop.alias_name }} ({{ laptop.hostname }})</option>
                     {% endfor %}
                 </select>
             </div>
-            <button id="trigger-update-btn" class="scan-button" style="width: 100%; padding: 10px; font-size: 1.1em; background-color: #2196F3; color: white;">Update jetzt triggern</button>
+            <button id="trigger-update-btn" style="width: 100%; padding: 15px; font-size: 1.1em;">Update jetzt triggern</button>
         </div>
     </main>
     <footer>
