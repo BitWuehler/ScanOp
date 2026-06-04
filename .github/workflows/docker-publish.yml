@@ -3,6 +3,8 @@ name: Docker Build and Publish
 on:
   push:
     branches: [ "main" ]
+  release:
+    types: [published]
   # Ermöglicht das manuelle Starten des Workflows über die GitHub UI
   workflow_dispatch:
 
@@ -34,7 +36,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            # Setzt 'latest' beim Push auf main
             type=raw,value=latest,enable={{is_default_branch}}
+            # Nutzt die Versionierung beim Erstellen eines Releases (z.B. v1.0.0 -> 1.0.0)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha
 
       - name: Build and push Docker image
@@ -44,3 +50,25 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  upload-client-assets:
+    runs-on: ubuntu-latest
+    # Führt diesen Job NUR aus, wenn der Workflow durch ein neues Release getriggert wurde
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Zip Client Folder
+        run: |
+          cd client
+          zip -r ../ScanOp-Client.zip ./*
+          cd ..
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ScanOp-Client.zip
+
