@@ -1,7 +1,7 @@
 <div align="center">
   <img src="static/scanop_logo.png" alt="ScanOp Logo" width="250"/>
   <h1>ScanOp</h1>
-  <p><b>Zentrales Virenscan-Management & Monitoring für Windows Clients</b></p>
+  <p><b>Centralized Antivirus Management & Monitoring for Windows Clients</b></p>
 
   ![Python](https://img.shields.io/badge/Python-3.12-blue.svg?logo=python)
   ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?logo=fastapi)
@@ -11,69 +11,67 @@
 
 ---
 
-## 🎯 Über ScanOp
+## About ScanOp
 
-ScanOp ist eine moderne, leichtgewichtige Webanwendung zur zentralen Steuerung und Überwachung von **Windows Defender Virenscans** über ein Netzwerk. Es ermöglicht Administratoren, den Sicherheitsstatus einer Flotte von Windows-Laptops zentral einzusehen, Scans aus der Ferne zu triggern und detaillierte PDF/CSV-Berichte zu generieren.
+ScanOp is a lightweight web application for managing and monitoring **Windows Defender** antivirus scans across a network. It provides administrators with a centralized dashboard to view the security status of Windows laptops, trigger remote scans, and generate PDF/CSV reports.
 
-## ✨ Kernfunktionen
+## Features
 
-| Kategorie | Funktion | Beschreibung |
+| Category | Feature | Description |
 | :--- | :--- | :--- |
-| 🛡️ **Sicherheit** | **Zentrales Management** | Starten Sie *Quick-* oder *Full-Scans* bequem über das Web-Dashboard für einzelne Laptops oder das gesamte Netzwerk. |
-| 📊 **Monitoring** | **Live-Status** | Sehen Sie auf einen Blick, ob Clients online sind, wann der letzte Scan lief und ob Bedrohungen gefunden wurden. |
-| 📈 **Reporting** | **Tagesberichte** | Exportieren Sie übersichtliche Tagesberichte als hochauflösendes PDF oder maschinenlesbares CSV für Ihre Audits. |
-| 🔄 **Updates** | **Remote-Updates** | Pushen Sie Client-Updates vollautomatisch über GitHub direkt aus dem Webinterface an alle Laptops. |
-| 🔌 **Architektur** | **Sichere API** | Robuste Polling-Architektur. Clients kontaktieren den Server via HTTPS und authentifizieren sich mit einem starken API-Key. |
+| 🛡️ **Security** | **Centralized Management** | Trigger *Quick* or *Full Scans* via the web dashboard for individual laptops or the entire network. |
+| 📊 **Monitoring** | **Live Status** | View client connection status, last scan times, and detected threats at a glance. |
+| 📈 **Reporting** | **Daily Reports** | Export daily summaries as PDF or CSV for auditing purposes. |
+| 🔄 **Updates** | **Remote Updates** | Deploy client script updates automatically via GitHub directly from the web interface. |
+| 🔌 **Architecture** | **Secure API** | Polling-based architecture. Clients connect via HTTPS and authenticate using an API key. |
 
 ---
 
-## 🚀 Server-Setup (Docker Deployment)
+## Server Setup (Docker)
 
-Das produktive Setup erfolgt am einfachsten und sichersten über Docker. Dank der integrierten GitHub Container Registry (GHCR) müssen Sie den Code nicht einmal klonen!
+Deploying via Docker is the recommended approach. 
 
-### 1. `docker-compose.yml` herunterladen
-Laden Sie sich lediglich die Konfigurationsdatei auf Ihren Docker-Host herunter:
+### 1. Download `docker-compose.yml`
+Download the compose file to your host machine:
 ```bash
 curl -o docker-compose.yml https://raw.githubusercontent.com/BitWuehler/ScanOp/main/docker-compose.yml
 ```
 
-### 2. Geheimnisse eintragen
-Öffnen Sie die `docker-compose.yml` und passen Sie die Environment-Variablen an:
-* `SECRET_KEY`: Ein beliebiger, langer String für die Session-Sicherheit.
-* `SERVER_API_KEY`: Der geheime Schlüssel, mit dem sich die Laptops später am Server ausweisen.
-* `APP_PASSWORD`: Ein **Bcrypt-Hash** für den Login in das Web-Dashboard (Nutzen Sie lokal `python hash_password.py` um einen Hash zu generieren).
+### 2. Configure Environment Variables
+Edit the downloaded `docker-compose.yml` and set your variables:
+* `SECRET_KEY`: A random string for session security.
+* `SERVER_API_KEY`: The API key clients will use to authenticate.
+* `APP_PASSWORD`: A **Bcrypt-hash** for the web dashboard login (You can use `python hash_password.py` locally to generate one).
 
-### 3. Server starten
-Docker zieht das fertige Image automatisch herunter, aktualisiert die Datenbank und startet den Webserver:
+### 3. Start the Server
+Start the container:
 ```bash
 docker compose up -d
 ```
 
 > [!TIP]
-> **Updates einspielen:** Um ScanOp später zu aktualisieren, wenn ein neues Release auf GitHub verfügbar ist, genügt ein einfaches:
-> `docker compose pull && docker compose up -d` 
-> Ihre Datenbank im Ordner `./data` bleibt dabei erhalten!
+> **Updating:** To update the server to the latest release, run `docker compose pull && docker compose up -d`. The database in `./data` is persistent.
 
 ---
 
-## 💻 Client-Installation
+## Client Installation
 
-Damit die Windows-Laptops mit dem Server kommunizieren, steht ein robuster PowerShell-Installer bereit.
+A PowerShell installer is provided to connect Windows laptops to the server.
 
-1. Gehen Sie auf die **Releases-Seite** dieses Repositories auf GitHub.
-2. Laden Sie die angeheftete **`ScanOp-Client.zip`** des aktuellsten Releases herunter und entpacken Sie diese auf dem Windows-Laptop.
-3. Führen Sie `start_installer.cmd` als Administrator aus.
-4. Folgen Sie den Anweisungen, um die URL Ihres Servers, den `SERVER_API_KEY` und einen Namen (Alias) für den Laptop einzugeben.
+1. Go to the [Releases page](https://github.com/BitWuehler/ScanOp/releases) on GitHub.
+2. Download and extract **`ScanOp-Client.zip`** from the latest release.
+3. Run `start_installer.cmd` as Administrator.
+4. Follow the prompts to enter your server URL, `SERVER_API_KEY`, and a client alias.
 
-*(Alternativ: Legen Sie vor der Installation eine Datei namens `client_config.json` in den Entpack-Ordner, um die Installation komplett ohne Benutzereingaben (`unattended`) durchzuführen).*
+*(Unattended Installation: Place a `client_config.json` file in the extraction folder before running the installer to bypass interactive prompts).*
 
 ---
 
-## 🛠️ Lokale Entwicklung
+## Local Development
 
-Für Entwickler, die an ScanOp mitarbeiten möchten:
+For development purposes:
 
-1. **Klonen & Setup:**
+1. **Clone & Setup:**
    ```bash
    git clone https://github.com/BitWuehler/ScanOp.git
    cd ScanOp
@@ -81,18 +79,13 @@ Für Entwickler, die an ScanOp mitarbeiten möchten:
    source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
    pip install -r requirements.txt
    ```
-2. **Datenbank & Umgebung:**
-   Kopieren Sie `.env.example` zu `.env` und passen Sie die Werte an.
-   Führen Sie die Datenbank-Migrationen aus:
+2. **Database & Environment:**
+   Copy `.env.example` to `.env` and adjust the variables.
+   Apply database migrations:
    ```bash
    alembic upgrade head
    ```
-3. **Starten:**
+3. **Start Server:**
    ```bash
    uvicorn main:app --reload
    ```
-
----
-<div align="center">
-  <i>Gebaut für IT-Admins, die den Überblick behalten wollen.</i>
-</div>
