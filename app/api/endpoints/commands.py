@@ -48,6 +48,25 @@ def get_client_command(laptop_identifier: str, version: str | None = None, db: S
 
 
 # ====================================================================
+# DIESE ROUTE IST FÜR DAS CLIENT-SKRIPT -> API-KEY ERFORDERLICH
+# ====================================================================
+class ClearCommandPayload(BaseModel):
+    client_version: str | None = None
+
+@router.post("/{laptop_identifier:path}/clear", response_model=schemas.Laptop, dependencies=[Depends(get_api_key)])
+def clear_client_command(laptop_identifier: str, payload: ClearCommandPayload = Body(default_factory=ClearCommandPayload), db: Session = Depends(get_db)):
+    db_laptop = crud.get_laptop_by_identifier(db, identifier=laptop_identifier)
+    if not db_laptop:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden.")
+    
+    crud.clear_laptop_command(db=db, laptop_identifier=laptop_identifier)
+    if payload.client_version:
+        crud.update_laptop_contact(db=db, laptop_identifier=laptop_identifier, client_version=payload.client_version)
+    
+    return db_laptop
+
+
+# ====================================================================
 # DIESE ROUTE IST FÜR DAS WEBINTERFACE -> LOGIN-SESSION ERFORDERLICH
 # ====================================================================
 @router.post("/trigger_scan/{laptop_identifier_or_all}", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(get_current_user_or_none)])

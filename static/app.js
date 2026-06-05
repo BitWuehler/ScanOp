@@ -498,6 +498,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (response.ok) {
                         successCount++;
+                        const row = document.getElementById(`laptop-row-${targetLaptop}`);
+                        if (row) {
+                            const versionCell = row.querySelector('.version-cell');
+                            if (versionCell) versionCell.innerHTML = '<span style="display:inline-block; animation: spin 1.5s linear infinite;">🔄</span> Aktualisiere...';
+                        }
                     } else {
                         errorCount++;
                     }
@@ -559,7 +564,39 @@ document.addEventListener('DOMContentLoaded', () => {
         pollingTimeoutId = setTimeout(checkForUpdates, POLLING_INTERVAL);
     }
 
-    if (document.querySelector('table.sortable-theme-bootstrap')) {
+    if (document.getElementById('updates-table')) {
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/v1/laptops');
+                if (!response.ok) return;
+                const laptops = await response.json();
+                laptops.forEach(laptop => {
+                    const row = document.getElementById(`laptop-row-${laptop.alias_name}`);
+                    if (row) {
+                        const versionCell = row.querySelector('.version-cell');
+                        if (versionCell) {
+                            if (laptop.pending_command === 'UPDATE_CLIENT') {
+                                if (!versionCell.innerHTML.includes('Aktualisiere')) {
+                                    versionCell.innerHTML = '<span style="display:inline-block; animation: spin 1.5s linear infinite;">🔄</span> Aktualisiere...';
+                                }
+                            } else {
+                                const v = laptop.client_version || 'N/A';
+                                if (versionCell.textContent.trim() !== v && versionCell.innerHTML.includes('Aktualisiere')) {
+                                    versionCell.textContent = v;
+                                    versionCell.style.color = '#10b981'; 
+                                    setTimeout(() => versionCell.style.color = '', 4000);
+                                } else if (!versionCell.innerHTML.includes('Aktualisiere')) {
+                                    versionCell.textContent = v;
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (err) { console.error('Polling laptops error:', err); }
+        }, 3000);
+    }
+
+    if (document.querySelector('[data-sortable]') && !document.getElementById('updates-table')) {
        setTimeout(checkForUpdates, 5000);
     }
 });

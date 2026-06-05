@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Finales, robustes Installations- und Update-Skript fÃ¼r den ScanOp Client.
 .DESCRIPTION
@@ -212,6 +212,14 @@ if (-not $isUpdateScenario) {
 
 # Block F: Abschluss
 # ====================================================================
+try {
+    $clearUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/clientcommands/$AliasName/clear"
+    $clearHeaders = @{ "X-API-Key" = $finalConfigObject.ApiKey; "Content-Type" = "application/json" }
+    $clearBody = @{ client_version = $finalConfigObject.GitHubVersion } | ConvertTo-Json
+    Invoke-RestMethod -Uri $clearUrl -Method Post -Headers $clearHeaders -Body $clearBody -ErrorAction SilentlyContinue | Out-Null
+    Write-Host "-> Status erfolgreich an Server gemeldet." -ForegroundColor Green
+} catch {}
+
 Write-Host ""
 Write-Host "Vorgang erfolgreich abgeschlossen." -ForegroundColor Green
 if (-not $IsUnattendedUpdate) {

@@ -414,3 +414,35 @@ input[type="checkbox"] {
     filter: brightness(1.2);
     transform: translateY(-1px);
 }
+
+/* Sortable Table Arrows */
+th[data-sortable] {
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px; /* Platz für Pfeile */
+}
+
+th[data-sortable]::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+th[data-sorted="true"][data-sorted-direction="ascending"]::after {
+    content: " \25B2"; /* Triangle up */
+    color: rgba(255, 255, 255, 0.8);
+}
+
+th[data-sorted="true"][data-sorted-direction="descending"]::after {
+    content: " \25BC"; /* Triangle down */
+    color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
