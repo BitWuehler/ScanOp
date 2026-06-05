@@ -42,12 +42,12 @@
         </nav>
     </header>
     <main>
-        <div style="margin-bottom: 20px;">
-            <h2>Client Update über GitHub</h2>
-            <p>Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
+        <div style="height: 80px; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="margin: 0;">Client Update über GitHub</h2>
+            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
         </div>
 
-        <div class="glass-container form-container actions-bar" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+        <div class="glass-container form-container actions-bar" style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Stapelverarbeitung:</h3>
             <div style="display: flex; gap: 10px;">
                 <button id="select-all-btn" class="button-secondary">Alle auswählen</button>
@@ -58,11 +58,12 @@
             </div>
         </div>
 
-        <div class="filter-bar" style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
+        <div class="filter-bar" style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
             <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
                 <div class="filter-btn-container" style="margin: 0;">
                     <button class="filter-btn" data-state="0" data-filter="online">Online</button>
                     <button class="filter-btn" data-state="0" data-filter="aktuell">Aktuell</button>
+                    <button class="filter-btn" data-state="0" data-filter="bedrohung">Bedrohung</button>
                 </div>
                 <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
             </div>

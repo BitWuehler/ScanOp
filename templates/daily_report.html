@@ -43,11 +43,12 @@
         </nav>
     </header>
     <main>
-        <div style="margin-bottom: 20px;">
-            <h2>Laptop-Status am {{ report_date_display }}</h2>
+        <div style="height: 80px; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="margin: 0;">Laptop-Status am {{ report_date_display }}</h2>
+            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Tagesbericht mit Scan-Ergebnissen der Clients.</p>
         </div>
 
-        <div class="glass-container form-container actions-bar" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+        <div class="glass-container form-container actions-bar" style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Bericht & Export:</h3>
             <form method="get" action="{{ url_for('web_daily_report') }}" style="display: flex; gap: 10px; align-items: center; margin: 0;">
                 <label for="report_date_str" style="margin: 0;">Datum (YYYY-MM-DD):</label>
@@ -59,8 +60,13 @@
             <button id="export-pdf-btn">Als PDF exportieren</button>
         </div>
 
-        <div class="filter-bar" style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
+        <div class="filter-bar" style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
             <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
+                <div class="filter-btn-container" style="margin: 0;">
+                    <button class="filter-btn" data-state="0" data-filter="ok">OK</button>
+                    <button class="filter-btn" data-state="0" data-filter="warnung">Warnung</button>
+                    <button class="filter-btn" data-state="0" data-filter="fehler">Fehler</button>
+                </div>
                 <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
             </div>
         </div>

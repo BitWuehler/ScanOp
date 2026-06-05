@@ -322,6 +322,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (filters['aktuell'] === '2' && isCurrent) visible = false;
                     }
                 }
+
+                // 'ok' filter
+                if (filters['ok']) {
+                    const hasOk = text.includes('ok'); // matches 'OK' status
+                    if (filters['ok'] === '1' && !hasOk) visible = false;
+                    if (filters['ok'] === '2' && hasOk) visible = false;
+                }
+
+                // 'warnung' filter
+                if (filters['warnung']) {
+                    const hasWarning = text.includes('warnung');
+                    if (filters['warnung'] === '1' && !hasWarning) visible = false;
+                    if (filters['warnung'] === '2' && hasWarning) visible = false;
+                }
+
+                // 'fehler' filter
+                if (filters['fehler']) {
+                    const hasError = text.includes('fehler');
+                    if (filters['fehler'] === '1' && !hasError) visible = false;
+                    if (filters['fehler'] === '2' && hasError) visible = false;
+                }
             }
 
             if (visible) {
