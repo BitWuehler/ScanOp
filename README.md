@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="static/scanop_logo.png" alt="ScanOp Logo" width="250"/>
+  <img src="static/scanop_icon.png" alt="ScanOp Logo" width="200"/>
   <h1>ScanOp</h1>
   <p><b>Centralized Antivirus Management & Monitoring for Windows Clients</b></p>
 
