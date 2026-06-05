@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,13 +10,17 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="shortcut icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/assets/style.css?v=4">
+    <link rel="stylesheet" href="/assets/sortable-theme-bootstrap.css?v=3" />
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 </head>
+
 <body>
     <header>
         <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
-            <div style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
-                <img src="/assets/scanop_icon.png" alt="ScanOp Logo" style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
+            <div
+                style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                <img src="/assets/scanop_icon.png" alt="ScanOp Logo"
+                    style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
             </div>
             <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
         </div>
@@ -29,15 +34,21 @@
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="icon-button" title="Einstellungen">⚙️</button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
+                    <label
+                        style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
                         Übergreifender Filter
                     </label>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <label for="settings_github_repo_url" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
-                    <input type="text" id="settings_github_repo_url" value="https://github.com/Benutzer/ScanOp" style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
-                    <label for="settings_github_version" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version (Tag/Branch):</label>
-                    <input type="text" id="settings_github_version" value="main" style="width: 100%; padding: 8px; font-size: 0.85rem;" />
+                    <label for="settings_github_repo_url"
+                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
+                    <input type="text" id="settings_github_repo_url" value="https://github.com/BitWuehler/ScanOp"
+                        style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
+                    <label for="settings_github_version"
+                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version
+                        (Tag/Branch):</label>
+                    <input type="text" id="settings_github_version" value="main"
+                        style="width: 100%; padding: 8px; font-size: 0.85rem;" />
                 </div>
             </div>
         </nav>
@@ -45,30 +56,34 @@
     <main>
         <div style="height: 80px; display: flex; flex-direction: column; justify-content: center;">
             <h2 style="margin: 0;">Registrierte Laptops</h2>
-            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Übersicht und Status aller angebundenen Clients.</p>
+            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Übersicht und Status aller
+                angebundenen Clients.</p>
         </div>
 
-        <div class="glass-container form-container actions-bar" style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
+        <div class="glass-container form-container actions-bar"
+            style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Globale Aktionen:</h3>
             <button class="scan-button" data-laptop-alias="all" data-scan-type="QuickScan">QuickScan für ALLE</button>
             <button class="scan-button" data-laptop-alias="all" data-scan-type="FullScan">FullScan für ALLE</button>
             <button class="cancel-command-button" data-laptop-alias="all">Alle Befehle abbrechen</button>
         </div>
 
-        <div class="filter-bar" style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
+        <div class="filter-bar"
+            style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
             <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
                 <div class="filter-btn-container" style="margin: 0;">
                     <button class="filter-btn" data-state="0" data-filter="online">Online</button>
                     <button class="filter-btn" data-state="0" data-filter="bedrohung">Bedrohung</button>
                     <button class="filter-btn" data-state="0" data-filter="fehler">Fehler</button>
                 </div>
-                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)"
+                    style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
             </div>
         </div>
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
-        <table data-sortable>
+        <table class="sortable-theme-bootstrap" data-sortable>
             <thead>
                 <tr>
                     <th>ID</th>
@@ -99,31 +114,36 @@
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
                         {% if laptop.last_scan_result_message %}
-                            <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:50] }}{% if laptop.last_scan_result_message|length > 50 %}...{% endif %}</span>
+                        <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:50] }}{%
+                            if laptop.last_scan_result_message|length > 50 %}...{% endif %}</span>
                         {% else %}
-                            N/A
+                        N/A
                         {% endif %}
                     </td>
                     <td>
                         {% if laptop.last_scan_threats_found is not none %}
-                            {{ "Ja" if laptop.last_scan_threats_found else "Nein" }}
+                        {{ "Ja" if laptop.last_scan_threats_found else "Nein" }}
                         {% else %}
-                            N/A
+                        N/A
                         {% endif %}
                     </td>
                     <td class="pending-command-cell">
                         {{ laptop.pending_command if laptop.pending_command else 'Kein' }}
                         {% if laptop.pending_command and laptop.pending_scan_type %}
-                            ({{ laptop.pending_scan_type }})
+                        ({{ laptop.pending_scan_type }})
                         {% endif %}
                     </td>
                     <td class="actions-cell">
-                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}" data-scan-type="QuickScan" title="QuickScan starten">QS</button>
-                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}" data-scan-type="FullScan" title="FullScan starten">FS</button>
+                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
+                            data-scan-type="QuickScan" title="QuickScan starten">QS</button>
+                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
+                            data-scan-type="FullScan" title="FullScan starten">FS</button>
                         {% if laptop.pending_command %}
-                        <button class="cancel-command-button" data-laptop-alias="{{ laptop.alias_name }}" title="Aktuellen Befehl abbrechen">Bef. X</button>
+                        <button class="cancel-command-button" data-laptop-alias="{{ laptop.alias_name }}"
+                            title="Aktuellen Befehl abbrechen">Bef. X</button>
                         {% endif %}
-                        <button class="delete-laptop-button" data-laptop-alias="{{ laptop.alias_name }}" title="Diesen Laptop löschen">Löschen</button>
+                        <button class="delete-laptop-button" data-laptop-alias="{{ laptop.alias_name }}"
+                            title="Diesen Laptop löschen">Löschen</button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -135,10 +155,11 @@
 
     </main>
     <footer>
-        <p>© 2025 ScanOp - Jonas Thiebes</p>
+        <p>© 2026 ScanOp - Jonas Thiebes</p>
     </footer>
 
     <script src="/assets/sortable.min.js?v=3"></script>
     <script src="/assets/app.js?v=3"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,11 +12,14 @@
     <link rel="stylesheet" href="/assets/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 </head>
+
 <body>
     <header>
         <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
-            <div style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
-                <img src="/assets/scanop_icon.png" alt="ScanOp Logo" style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
+            <div
+                style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                <img src="/assets/scanop_icon.png" alt="ScanOp Logo"
+                    style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
             </div>
             <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
         </div>
@@ -29,15 +33,21 @@
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="icon-button" title="Einstellungen">⚙️</button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
+                    <label
+                        style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
                         Übergreifender Filter
                     </label>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <label for="settings_github_repo_url" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
-                    <input type="text" id="settings_github_repo_url" value="https://github.com/Benutzer/ScanOp" style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
-                    <label for="settings_github_version" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version (Tag/Branch):</label>
-                    <input type="text" id="settings_github_version" value="main" style="width: 100%; padding: 8px; font-size: 0.85rem;" />
+                    <label for="settings_github_repo_url"
+                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
+                    <input type="text" id="settings_github_repo_url" value="https://github.com/BitWuehler/ScanOp"
+                        style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
+                    <label for="settings_github_version"
+                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version
+                        (Tag/Branch):</label>
+                    <input type="text" id="settings_github_version" value="main"
+                        style="width: 100%; padding: 8px; font-size: 0.85rem;" />
                 </div>
             </div>
         </nav>
@@ -45,29 +55,36 @@
     <main>
         <div style="height: 80px; display: flex; flex-direction: column; justify-content: center;">
             <h2 style="margin: 0;">Laptop-Status am {{ report_date_display }}</h2>
-            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Tagesbericht mit Scan-Ergebnissen der Clients.</p>
+            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Tagesbericht mit Scan-Ergebnissen
+                der Clients.</p>
         </div>
 
-        <div class="glass-container form-container actions-bar" style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
+        <div class="glass-container form-container actions-bar"
+            style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Bericht & Export:</h3>
-            <form method="get" action="{{ url_for('web_daily_report') }}" style="display: flex; gap: 10px; align-items: center; margin: 0;">
+            <form method="get" action="{{ url_for('web_daily_report') }}"
+                style="display: flex; gap: 10px; align-items: center; margin: 0;">
                 <label for="report_date_str" style="margin: 0;">Datum (YYYY-MM-DD):</label>
-                <input type="date" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}" placeholder="YYYY-MM-DD" style="width: 150px; padding: 8px; color-scheme: dark;">
+                <input type="date" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
+                    placeholder="YYYY-MM-DD" style="width: 150px; padding: 8px; color-scheme: dark;">
                 <button type="submit" style="padding: 8px 15px;">Anzeigen</button>
             </form>
             <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
-            <a href="{{ url_for('export_daily_report_csv') }}?report_date_str={{ report_date_iso }}" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
+            <a href="{{ url_for('export_daily_report_csv') }}?report_date_str={{ report_date_iso }}" class="button-link"
+                id="export-csv-btn">Als CSV exportieren</a>
             <button id="export-pdf-btn">Als PDF exportieren</button>
         </div>
 
-        <div class="filter-bar" style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
+        <div class="filter-bar"
+            style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
             <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
                 <div class="filter-btn-container" style="margin: 0;">
                     <button class="filter-btn" data-state="0" data-filter="ok">OK</button>
                     <button class="filter-btn" data-state="0" data-filter="warnung">Warnung</button>
                     <button class="filter-btn" data-state="0" data-filter="fehler">Fehler</button>
                 </div>
-                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)"
+                    style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
             </div>
         </div>
 
@@ -91,9 +108,10 @@
                     <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
                     <td>
                         {% if laptop.last_scan_result_message %}
-                            <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:70] }}{% if laptop.last_scan_result_message|length > 70 %}...{% endif %}</span>
+                        <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:70] }}{%
+                            if laptop.last_scan_result_message|length > 70 %}...{% endif %}</span>
                         {% else %}
-                            N/A
+                        N/A
                         {% endif %}
                     </td>
                     <td class="{{ item.status_color_class }}">
@@ -109,10 +127,11 @@
         {% endif %}
     </main>
     <footer>
-        <p>© 2025 ScanOp - Jonas Thiebes</p>
+        <p>© 2026 ScanOp - Jonas Thiebes</p>
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="/assets/app.js?v=3"></script>
 </body>
+
 </html>
