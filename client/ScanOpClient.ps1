@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     GehÃ¤rtetes Client-Skript zum Pollen von Befehlen mit Failsafe-Timeout und robuster Scan-Erkennung.
 .DESCRIPTION

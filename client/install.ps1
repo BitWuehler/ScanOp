@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Finales, robustes Installations- und Update-Skript fÃ¼r den ScanOp Client.
 .DESCRIPTION

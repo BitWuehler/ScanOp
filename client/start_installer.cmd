@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM Dieses Skript startet den PowerShell-Installer mit Administratorrechten
 REM und stellt die korrekte Zeichenkodierung (UTF-8) für die Konsole sicher.
 
