@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import cast
+import urllib.request
+import json
 
 from app import crud, schemas, models 
 from app.database import get_db
@@ -114,6 +116,25 @@ def trigger_update_for_client(
     db: Session = Depends(get_db)
 ):
     command_to_set = "UPDATE_CLIENT"
+
+    if payload.version:
+        v_stripped = payload.version.strip()
+        if v_stripped.lower() == "latest":
+            try:
+                repo_path = payload.repo_url.replace("https://github.com/", "").replace("http://github.com/", "").strip("/")
+                api_url = f"https://api.github.com/repos/{repo_path}/releases/latest"
+                req = urllib.request.Request(api_url, headers={'User-Agent': 'ScanOp-Backend'})
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    release_data = json.loads(response.read().decode())
+                    payload.version = release_data.get("tag_name", "main")
+            except Exception as e:
+                print(f"WARNUNG: Konnte 'latest' Release nicht auflösen: {e}")
+                payload.version = "main" # Fallback
+        elif v_stripped.lower() != "main" and v_stripped and v_stripped[0].isdigit():
+            payload.version = f"v{v_stripped}"
+        else:
+            payload.version = v_stripped
+
     payload_json = payload.model_dump_json()
 
     if laptop_identifier_or_all.lower() == "all":

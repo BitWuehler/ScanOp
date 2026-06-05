@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     GehÃ¤rtetes Client-Skript zum Pollen von Befehlen mit Failsafe-Timeout und robuster Scan-Erkennung.
 .DESCRIPTION
@@ -217,10 +217,12 @@ while ($true) {
                                         }
                                         else {
                                             Write-Log -Level ERROR -Message "UPDATE_CLIENT Befehl ohne Payload erhalten."
+                                            try { Invoke-RestMethod -Uri "$ServerBaseUrl/api/v1/clientcommands/$AliasName/clear" -Method Post -Headers @{ "X-API-Key" = $ApiKey; "Content-Type" = "application/json" } -Body (@{ client_version = $ClientVersion } | ConvertTo-Json) -ErrorAction SilentlyContinue | Out-Null } catch {}
                                         }
                                     }
                                     catch {
                                         Write-Log -Level ERROR -Message "Fehler beim Update: $($_.Exception.Message)"
+                                        try { Invoke-RestMethod -Uri "$ServerBaseUrl/api/v1/clientcommands/$AliasName/clear" -Method Post -Headers @{ "X-API-Key" = $ApiKey; "Content-Type" = "application/json" } -Body (@{ client_version = $ClientVersion } | ConvertTo-Json) -ErrorAction SilentlyContinue | Out-Null } catch {}
                                     }
                                 }
                             }
