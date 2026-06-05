@@ -50,14 +50,23 @@ if ($isUpdateScenario) {
     if ($IsUnattendedUpdate) {
         $downloadRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
         $downloadVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
-        $clientScriptUrl = "$downloadRepoUrl/raw/$downloadVersion/client/ScanOpClient.ps1"
-        $downloadedScriptPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient_update.ps1"
+        $zipUrl = "$downloadRepoUrl/releases/download/$downloadVersion/ScanOp-Client.zip"
+        $zipPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOp-Client.zip"
+        $extractPath = Join-Path -Path $InstallerBaseDir -ChildPath "extracted_update"
         try {
-            Invoke-WebRequest -Uri $clientScriptUrl -OutFile $downloadedScriptPath -UseBasicParsing
-            $ClientScriptSourcePath = $downloadedScriptPath
-            Write-Host "-> Neues Client-Skript heruntergeladen ($downloadVersion)." -ForegroundColor Green
+            Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
+            if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force }
+            Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+            $ClientScriptSourcePath = Join-Path -Path $extractPath -ChildPath "ScanOpClient.ps1"
+            Write-Host "-> Release-ZIP heruntergeladen und entpackt ($downloadVersion)." -ForegroundColor Green
         } catch {
-            Write-Warning "Fehler beim Herunterladen des neuen Client-Skripts. Verwende lokales Fallback."
+            Write-Warning "Fehler beim Herunterladen der Release-ZIP. Versuche RAW-Download als Fallback..."
+            $clientScriptUrl = "$downloadRepoUrl/raw/$downloadVersion/client/ScanOpClient.ps1"
+            $downloadedScriptPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient_update.ps1"
+            try {
+                Invoke-WebRequest -Uri $clientScriptUrl -OutFile $downloadedScriptPath -UseBasicParsing
+                $ClientScriptSourcePath = $downloadedScriptPath
+            } catch {}
         }
     }
 
