@@ -68,7 +68,7 @@ while ($true) {
 
         $AliasName = $Config.AliasName; $ServerBaseUrl = $Config.ServerBaseUrl; $ApiKey = $Config.ApiKey 
         $PollingIntervalSeconds = $Config.PollingIntervalSeconds; $InitialRetryDelaySeconds = 60; $MaxRetryDelaySeconds = 1800
-        $ClientVersion = "1.0.0"
+        $ClientVersion = if ($Config.GitHubVersion) { $Config.GitHubVersion } else { "1.0.0" }
         
         $Script:ActiveScanJob = $null; $Script:ScanInitiationTimeUTC = $null; $Script:ScanTypeForActiveJob = $null
         $Global:LastSuccessfulReportTimeUTC = $null
@@ -149,16 +149,18 @@ while ($true) {
             }
 
             # --- 2. BEFEHLSABRUF ---
-            if ($null -eq $Script:ActiveScanJob) {
-                if ($networkOperationSuccess) {
-                    Write-Log -Message "Frage Befehle vom Server ab: $CommandUrl"
-                    try {
-                        $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -Headers @{ "X-API-Key" = $ApiKey } -TimeoutSec 20 -ErrorAction Stop
-                        $currentRetryDelay = $InitialRetryDelaySeconds
-                        if ($null -ne $commandResponse -and $commandResponse.command) {
-                            Write-Log -Message "Befehl erhalten: $($commandResponse.command)"
-                            switch ($commandResponse.command) {
-                                "START_SCAN" {
+            if ($networkOperationSuccess) {
+                Write-Log -Message "Frage Befehle vom Server ab: $CommandUrl"
+                try {
+                    $commandResponse = Invoke-RestMethod -Uri $CommandUrl -Method Get -Headers @{ "X-API-Key" = $ApiKey } -TimeoutSec 20 -ErrorAction Stop
+                    $currentRetryDelay = $InitialRetryDelaySeconds
+                    if ($null -ne $commandResponse -and $commandResponse.command) {
+                        Write-Log -Message "Befehl erhalten: $($commandResponse.command)"
+                        switch ($commandResponse.command) {
+                            "START_SCAN" {
+                                if ($null -ne $Script:ActiveScanJob) {
+                                    Write-Log -Message "Ein Scan läuft bereits. Ignoriere neuen START_SCAN Befehl."
+                                } else {
                                     $scanTypeToUse = if ($commandResponse.scan_type -in ("QuickScan", "FullScan")) { $commandResponse.scan_type } else { "FullScan" }
                                     Write-Log -Message "Aktion: Starte neuen Scan (Typ: $scanTypeToUse) als Hintergrund-Job..."
                                     $Script:ScanInitiationTimeUTC = (Get-Date).ToUniversalTime()
@@ -177,29 +179,26 @@ while ($true) {
                                     
                                     Write-Log -Message "Scan als Job gestartet mit ID: $($Script:ActiveScanJob.Id)."
                                 }
-                                "UPDATE_CLIENT" {
+                            }
+                            "UPDATE_CLIENT" {
+                                if ($null -ne $Script:ActiveScanJob) {
+                                    Write-Log -Message "Ein Scan läuft derzeit. Ignoriere UPDATE_CLIENT bis zum Abschluss."
+                                } else {
                                     Write-Log -Message "Aktion: Führe Client-Update durch..."
                                     try {
                                         if ($null -ne $commandResponse.payload) {
                                             $payloadObj = $commandResponse.payload | ConvertFrom-Json
-                                            $repoUrl = $payloadObj.repo_url.TrimEnd('/')
-                                            $version = $payloadObj.version
+                                            $repoUrl = if ($payloadObj.repo_url) { $payloadObj.repo_url.TrimEnd('/') } else { "https://github.com/BitWuehler/ScanOp" }
+                                            $version = if ($payloadObj.version) { $payloadObj.version } else { "main" }
                                             
-                                            Write-Log -Message "Lade Update von: $repoUrl (Version: $version)"
+                                            Write-Log -Message "Update-Ziel: Repo=$repoUrl, Version=$version"
                                             
-                                            # Lade das aktuelle install.ps1 herunter
                                             $installerUrl = "$repoUrl/raw/$version/client/install.ps1"
                                             $installerPath = Join-Path -Path $ScriptDir -ChildPath "install_update.ps1"
                                             
                                             Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
                                             
                                             Write-Log -Message "Installer heruntergeladen. Starte Update-Prozess im Hintergrund und beende mich."
-                                            
-                                            # Installer muss die anderen Dateien nachladen. Da das install.ps1 interaktiv ist, 
-                                            # mÃ¼ssen wir eventuell Parameter Ã¼bergeben, falls es diese unterstÃ¼tzt, oder einfach blind starten.
-                                            # Wir Ã¼bergeben hier Repository-URL und Version als Argumente an das install.ps1,
-                                            # dafÃ¼r mÃ¼ssen wir sicherstellen, dass install.ps1 das unterstÃ¼tzt, oder wir laden hier alles selbst herunter.
-                                            # Da der Nutzer "install.ps1" im letzten Task aktualisiert hat, gehen wir davon aus, dass wir es aufrufen kÃ¶nnen.
                                             
                                             $startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installerPath`" -RepoUrl `"$repoUrl`" -Version `"$version`" -IsUnattendedUpdate"
                                             Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs -Verb RunAs
@@ -212,11 +211,11 @@ while ($true) {
                                         Write-Log -Level ERROR -Message "Fehler beim Update: $($_.Exception.Message)"
                                     }
                                 }
-                                default { Write-Log -Level WARN -Message "Unbekannter Befehl: $($commandResponse.command)" }
                             }
-                        } else { Write-Log -Message "Kein Befehl vom Server." }
-                    } catch { Write-Log -Level ERROR -Message "Netzwerkfehler beim Abrufen von Befehlen: $($_.Exception.Message)"; $networkOperationSuccess = $false }
-                }
+                            default { Write-Log -Level WARN -Message "Unbekannter Befehl: $($commandResponse.command)" }
+                        }
+                    } else { Write-Log -Message "Kein Befehl vom Server." }
+                } catch { Write-Log -Level ERROR -Message "Netzwerkfehler beim Abrufen von Befehlen: $($_.Exception.Message)"; $networkOperationSuccess = $false }
             }
 
             # --- 3. WARTEZEIT ---
