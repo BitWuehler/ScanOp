@@ -23,7 +23,7 @@ router = APIRouter(
 # Diese Routen sind für die Client-Skripte und benötigen einen API-Schlüssel
 # =======================================================================================
 
-@router.post("", response_model=schemas.ScanReport, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_api_key)])
+@router.post("/", response_model=schemas.ScanReport, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_api_key)])
 async def submit_scan_report(
     request: Request, 
     db: Session = Depends(get_db)
@@ -77,7 +77,7 @@ def read_reports_for_laptop(laptop_identifier: str, skip: int = 0, limit: int = 
     return reports
 
 
-@router.get("", response_model=List[schemas.ScanReport], dependencies=[Depends(get_api_key)])
+@router.get("/", response_model=List[schemas.ScanReport], dependencies=[Depends(get_api_key)])
 def read_all_reports(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
     reports = crud.get_all_scan_reports(db, skip=skip, limit=limit)
     return reports
