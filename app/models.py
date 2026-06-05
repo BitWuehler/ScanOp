@@ -23,6 +23,8 @@ class Laptop(Base):
     pending_scan_type = Column(String, nullable=True)
     pending_command_payload = Column(Text, nullable=True)
     command_issue_time = Column(DateTime(timezone=True), nullable=True)
+    
+    client_version = Column(String, nullable=True)
 
     # Beziehung zu ScanReports
     # 'back_populates' muss auf den Namen der Beziehung in ScanReport zeigen

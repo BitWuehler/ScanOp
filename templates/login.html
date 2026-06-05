@@ -4,11 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - ScanOp</title>
-    <link rel="stylesheet" href="/assets/style.css?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/assets/style.css?v=4">
 </head>
 <body class="login-page">
     <div class="login-container">
-        <h1>ScanOp Login</h1>
+        <div class="login-header" style="text-align: center; margin-bottom: 30px;">
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 50%; display: inline-block; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); margin-bottom: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+                <img src="/assets/scanop_logo.png" alt="ScanOp Logo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; animation: pulse 2s infinite alternate;">
+            </div>
+            <h1 style="margin: 0; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">ScanOp</h1>
+            <p style="color: var(--text-muted); margin-top: 5px;">Sicherheits-Dashboard</p>
+        </div>
         {% if error %}
             <div class="error-message">{{ error }}</div>
         {% endif %}

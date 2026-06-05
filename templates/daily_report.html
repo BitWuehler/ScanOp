@@ -4,26 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - ScanOp</title>
-    <link rel="stylesheet" href="/assets/style.css?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/assets/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>ScanOp - {{ title }}</h1>
-        <nav>
+        <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+            <img src="/assets/scanop_logo.png" alt="ScanOp Logo" style="height: 40px; border-radius: 6px;">
+            <h1>ScanOp - {{ title }}</h1>
+        </div>
+        <nav style="display: flex; align-items: center; gap: 20px;">
             <ul>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
                 <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
                 <li><a href="{{ url_for('web_client_updates') }}">Client Updates</a></li>
-                <!-- NEU: Logout Link -->
                 <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
             </ul>
+            <div class="settings-menu-container">
+                <button id="settings-toggle-btn" class="icon-button" title="Einstellungen">⚙️</button>
+                <div id="settings-dropdown" class="settings-dropdown glass-container hidden">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: var(--text-main);">
+                        <input type="checkbox" id="global-filter-toggle">
+                        Übergreifender Filter
+                    </label>
+                </div>
+            </div>
         </nav>
-        <div style="margin-top: 10px;">
-            <form method="get" action="{{ url_for('web_daily_report') }}">
-                <label for="report_date_str">Datum für Bericht (YYYY-MM-DD):</label>
-                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}" placeholder="YYYY-MM-DD">
-                <button type="submit">Bericht anzeigen</button>
+        <div style="margin-top: 15px; width: 100%;">
+            <form method="get" action="{{ url_for('web_daily_report') }}" style="display: flex; gap: 10px; align-items: center;">
+                <label for="report_date_str" style="margin: 0;">Datum für Bericht (YYYY-MM-DD):</label>
+                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}" placeholder="YYYY-MM-DD" style="width: auto; padding: 8px;">
+                <button type="submit" style="padding: 8px 15px;">Bericht anzeigen</button>
             </form>
         </div>
     </header>

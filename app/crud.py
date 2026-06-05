@@ -47,10 +47,12 @@ def delete_laptop_by_identifier(db: Session, laptop_identifier: str) -> Union[mo
     return db_laptop
 
 
-def update_laptop_contact(db: Session, laptop_identifier: str) -> Union[models.Laptop, None]:
+def update_laptop_contact(db: Session, laptop_identifier: str, client_version: Union[str, None] = None) -> Union[models.Laptop, None]:
     db_laptop = get_laptop_by_identifier(db=db, identifier=laptop_identifier)
     if db_laptop:
         db_laptop.last_api_contact = datetime.now(timezone.utc)
+        if client_version:
+            db_laptop.client_version = client_version
         db.commit()
         db.refresh(db_laptop)
     return db_laptop

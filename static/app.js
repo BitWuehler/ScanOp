@@ -229,40 +229,167 @@ document.addEventListener('DOMContentLoaded', () => {
         exportPdfBtn.title = "PDF-Bibliothek nicht geladen";
     }
     
+    // Settings Dropdown Logic
+    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    const settingsDropdown = document.getElementById('settings-dropdown');
+    if (settingsToggleBtn && settingsDropdown) {
+        settingsToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!settingsDropdown.contains(e.target) && e.target !== settingsToggleBtn) {
+                settingsDropdown.classList.add('hidden');
+            }
+        });
+    }
+
+    // Global Filter Logic
+    const globalFilterToggle = document.getElementById('global-filter-toggle');
+    const filterInput = document.getElementById('table-filter-input');
+    
+    function applyFilter(searchTerm) {
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm.toLowerCase())) {
+                row.classList.remove('hidden-row');
+            } else {
+                row.classList.add('hidden-row');
+            }
+        });
+    }
+
+    if (globalFilterToggle) {
+        const isGlobalEnabled = localStorage.getItem('scanop_global_filter_enabled') === 'true';
+        globalFilterToggle.checked = isGlobalEnabled;
+
+        globalFilterToggle.addEventListener('change', (e) => {
+            localStorage.setItem('scanop_global_filter_enabled', e.target.checked);
+            if (!e.target.checked) {
+                localStorage.removeItem('scanop_filter_text');
+            } else if (filterInput) {
+                localStorage.setItem('scanop_filter_text', filterInput.value);
+            }
+        });
+    }
+
+    if (filterInput) {
+        const isGlobalEnabled = localStorage.getItem('scanop_global_filter_enabled') === 'true';
+        if (isGlobalEnabled) {
+            const savedText = localStorage.getItem('scanop_filter_text') || '';
+            filterInput.value = savedText;
+            applyFilter(savedText);
+        }
+
+        filterInput.addEventListener('input', (e) => {
+            const term = e.target.value;
+            applyFilter(term);
+            if (globalFilterToggle && globalFilterToggle.checked) {
+                localStorage.setItem('scanop_filter_text', term);
+            }
+        });
+    }
+
+    // Updates Page Checkbox Logic
+    const masterCheckbox = document.getElementById('master-checkbox');
+    const laptopCheckboxes = document.querySelectorAll('.laptop-checkbox');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const selectOutdatedBtn = document.getElementById('select-outdated-btn');
+    const githubVersionInput = document.getElementById('github_version');
+
+    if (masterCheckbox) {
+        masterCheckbox.addEventListener('change', (e) => {
+            laptopCheckboxes.forEach(cb => {
+                // only check if row is not hidden by filter
+                const row = cb.closest('tr');
+                if (!row.classList.contains('hidden-row')) {
+                    cb.checked = e.target.checked;
+                }
+            });
+        });
+    }
+
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            laptopCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (!row.classList.contains('hidden-row')) {
+                    cb.checked = true;
+                }
+            });
+            if (masterCheckbox) masterCheckbox.checked = true;
+        });
+    }
+
+    if (selectOutdatedBtn && githubVersionInput) {
+        selectOutdatedBtn.addEventListener('click', () => {
+            const targetVersion = githubVersionInput.value.trim();
+            laptopCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (!row.classList.contains('hidden-row')) {
+                    const clientVersion = cb.dataset.version;
+                    if (clientVersion !== targetVersion) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                }
+            });
+            if (masterCheckbox) masterCheckbox.checked = false;
+        });
+    }
+
     const triggerUpdateBtn = document.getElementById('trigger-update-btn');
     if (triggerUpdateBtn) {
         triggerUpdateBtn.addEventListener('click', async function() {
-            const targetLaptop = document.getElementById('target_laptop').value;
-            const repoUrl = document.getElementById('github_repo_url').value;
-            const version = document.getElementById('github_version').value;
+            const repoUrl = document.getElementById('github_repo_url')?.value;
+            const version = document.getElementById('github_version')?.value;
+            
+            const selectedCheckboxes = document.querySelectorAll('.laptop-checkbox:checked');
+            const aliasesToUpdate = Array.from(selectedCheckboxes).map(cb => cb.dataset.alias);
 
             if (!repoUrl || !version) {
                 showStatusMessage('Bitte Repository-URL und Version angeben.', 'error');
                 return;
             }
 
-            const apiUrl = `/api/v1/clientcommands/trigger_update/${targetLaptop}`;
-            triggerUpdateBtn.disabled = true;
-            showStatusMessage(`Sende Update-Befehl für ${targetLaptop === 'all' ? 'ALLE Laptops' : targetLaptop}...`, 'info');
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ repo_url: repoUrl, version: version })
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    showStatusMessage(`Erfolg: ${result.message}`, 'success');
-                } else {
-                    showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
-                }
-            } catch (error) {
-                console.error("Update-Button Fehler:", error);
-                showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
-            } finally {
-                setTimeout(() => { triggerUpdateBtn.disabled = false; }, 1500);
+            if (aliasesToUpdate.length === 0) {
+                showStatusMessage('Bitte mindestens einen Client auswählen.', 'error');
+                return;
             }
+
+            triggerUpdateBtn.disabled = true;
+            showStatusMessage(`Sende Update-Befehl für ${aliasesToUpdate.length} Laptop(s)...`, 'info');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const targetLaptop of aliasesToUpdate) {
+                const apiUrl = `/api/v1/clientcommands/trigger_update/${targetLaptop}`;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ repo_url: repoUrl, version: version })
+                    });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount === 0) {
+                showStatusMessage(`Erfolg: Update-Befehl für ${successCount} Laptop(s) gesendet!`, 'success');
+            } else {
+                showStatusMessage(`${successCount} erfolgreich, ${errorCount} fehlerhaft.`, 'warning');
+            }
+            
+            setTimeout(() => { triggerUpdateBtn.disabled = false; }, 2000);
         });
     }
 

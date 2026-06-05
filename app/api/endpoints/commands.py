@@ -24,13 +24,13 @@ class TriggerScanPayload(BaseModel):
 # DIESE ROUTE IST FÜR DAS CLIENT-SKRIPT -> API-KEY ERFORDERLICH
 # ====================================================================
 @router.get("/{laptop_identifier:path}", response_model=schemas.ClientCommandResponse, dependencies=[Depends(get_api_key)])
-def get_client_command(laptop_identifier: str, db: Session = Depends(get_db)):
+def get_client_command(laptop_identifier: str, version: str | None = None, db: Session = Depends(get_db)):
     db_laptop = crud.get_laptop_by_identifier(db, identifier=laptop_identifier)
     if not db_laptop: 
         print(f"WARNUNG: Client mit Kennung '{laptop_identifier}' nicht gefunden (404).")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht registriert oder Kennung unbekannt.")
 
-    crud.update_laptop_contact(db=db, laptop_identifier=laptop_identifier)
+    crud.update_laptop_contact(db=db, laptop_identifier=laptop_identifier, client_version=version)
 
     command_to_send = schemas.ClientCommandResponse()
     

@@ -131,4 +131,26 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
     if redirect: return redirect
         
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
-    return templates.TemplateResponse("client_updates.html", {"request": request, "laptops": all_laptops_db, "title": "Client Updates", "user": user})
+    now_utc = datetime.now(timezone.utc)
+    laptops_with_status = []
+    
+    for laptop in all_laptops_db:
+        is_online = False
+        status_text = "Offline"
+        color_class = "status-red"
+        
+        if laptop.last_api_contact:
+            contact_aware = laptop.last_api_contact.astimezone(timezone.utc)
+            if (now_utc - contact_aware) <= timedelta(minutes=5):
+                is_online = True
+                status_text = "Online"
+                color_class = "status-green"
+                
+        laptops_with_status.append({
+            "db_data": laptop,
+            "is_online": is_online,
+            "status_text": status_text,
+            "color_class": color_class
+        })
+        
+    return templates.TemplateResponse("client_updates.html", {"request": request, "laptops_list": laptops_with_status, "title": "Client Updates", "user": user})

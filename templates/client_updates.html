@@ -4,51 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - ScanOp</title>
-    <link rel="stylesheet" href="/assets/style.css?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/assets/style.css?v=4">
 </head>
 <body>
     <header>
-        <h1>ScanOp - {{ title }}</h1>
-        <nav>
+        <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+            <img src="/assets/scanop_logo.png" alt="ScanOp Logo" style="height: 40px; border-radius: 6px;">
+            <h1>ScanOp - {{ title }}</h1>
+        </div>
+        <nav style="display: flex; align-items: center; gap: 20px;">
             <ul>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
                 <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
                 <li><a href="{{ url_for('web_client_updates') }}">Client Updates</a></li>
                 <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
             </ul>
+            <div class="settings-menu-container">
+                <button id="settings-toggle-btn" class="icon-button" title="Einstellungen">⚙️</button>
+                <div id="settings-dropdown" class="settings-dropdown glass-container hidden">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: var(--text-main);">
+                        <input type="checkbox" id="global-filter-toggle">
+                        Übergreifender Filter
+                    </label>
+                </div>
+            </div>
         </nav>
     </header>
     <main>
-        <h2>Client Update über GitHub</h2>
-        <p>Lösen Sie hier ein Update der Client-Skripte aus. Der ausgewählte Client wird die neuen Dateien von dem angegebenen GitHub Repository herunterladen und seinen Dienst neu starten.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h2>Client Update über GitHub</h2>
+                <p>Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
+            </div>
+            <div class="filter-container" style="width: 300px;">
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px; border-radius: 20px; padding-left: 15px;">
+            </div>
+        </div>
 
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
-        <div class="glass-container form-container" style="max-width: 600px; margin-top: 20px;">
-            <div style="margin-bottom: 20px;">
+        <div class="glass-container form-container" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
                 <label for="github_repo_url">GitHub Repository URL (Raw / API / oder Basis-URL):</label>
                 <input type="text" id="github_repo_url" value="https://github.com/Benutzer/ScanOp" />
             </div>
-            <div style="margin-bottom: 20px;">
-                <label for="github_version">Version (Branch-Name oder Tag):</label>
+            <div style="flex: 1; min-width: 150px;">
+                <label for="github_version">Ziel-Version (Branch oder Tag):</label>
                 <input type="text" id="github_version" value="main" />
             </div>
-            <div style="margin-bottom: 25px;">
-                <label for="target_laptop">Ziel-Laptop:</label>
-                <select id="target_laptop">
-                    <option value="all">-- ALLE LAPTOPS --</option>
-                    {% for laptop in laptops %}
-                    <option value="{{ laptop.alias_name }}">{{ laptop.alias_name }} ({{ laptop.hostname }})</option>
-                    {% endfor %}
-                </select>
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button id="select-all-btn" class="button-secondary">Alle auswählen</button>
+                <button id="select-outdated-btn" class="button-secondary">Veraltete auswählen</button>
             </div>
-            <button id="trigger-update-btn" style="width: 100%; padding: 15px; font-size: 1.1em;">Update jetzt triggern</button>
         </div>
+
+        {% if laptops_list %}
+        <table id="updates-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
+                    <th>Hostname</th>
+                    <th>Alias</th>
+                    <th>Online-Status</th>
+                    <th>Client Version</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in laptops_list %}
+                {% set laptop = item.db_data %}
+                <tr id="laptop-row-{{ laptop.alias_name }}">
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}" data-version="{{ laptop.client_version or '0.0.0' }}">
+                    </td>
+                    <td>{{ laptop.hostname }}</td>
+                    <td>{{ laptop.alias_name }}</td>
+                    <td class="{{ item.color_class }}">{{ item.status_text }}</td>
+                    <td class="version-cell">{{ laptop.client_version if laptop.client_version else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: right;">
+            <button id="trigger-update-btn" style="padding: 15px 30px; font-size: 1.1em;">Update für markierte triggern</button>
+        </div>
+        {% else %}
+        <p>Keine Laptops registriert.</p>
+        {% endif %}
     </main>
     <footer>
         <p>© 2025 ScanOp - Jonas Thiebes</p>
     </footer>
 
-    <script src="/assets/app.js?v=3"></script>
+    <script src="/assets/app.js?v=4"></script>
 </body>
 </html>
