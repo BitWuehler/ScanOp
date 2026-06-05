@@ -42,23 +42,13 @@
         </nav>
     </header>
     <main>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-            <div>
-                <h2>Client Update über GitHub</h2>
-                <p>Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
-            </div>
-            <div class="filter-container" style="width: 300px; display: flex; flex-direction: column; align-items: flex-end;">
-                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px; border-radius: 20px; padding-left: 15px; width: 100%;">
-                <div class="filter-btn-container">
-                    <button class="filter-btn" data-state="0" data-filter="online">Online</button>
-                    <button class="filter-btn" data-state="0" data-filter="aktuell">Aktuell</button>
-                </div>
-            </div>
+        <div style="margin-bottom: 20px;">
+            <h2>Client Update über GitHub</h2>
+            <p>Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
         </div>
 
-        <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
-
-        <div class="glass-container form-container" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
+        <div class="glass-container form-container actions-bar" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Stapelverarbeitung:</h3>
             <div style="display: flex; gap: 10px;">
                 <button id="select-all-btn" class="button-secondary">Alle auswählen</button>
                 <button id="select-outdated-btn" class="button-secondary">Veraltete auswählen</button>
@@ -67,6 +57,18 @@
                 <span id="display-repo-info">Repo URL und Version können oben rechts im ⚙️ Menü eingestellt werden.</span>
             </div>
         </div>
+
+        <div class="filter-bar" style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
+            <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
+                <div class="filter-btn-container" style="margin: 0;">
+                    <button class="filter-btn" data-state="0" data-filter="online">Online</button>
+                    <button class="filter-btn" data-state="0" data-filter="aktuell">Aktuell</button>
+                </div>
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
+            </div>
+        </div>
+
+        <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
         <table id="updates-table">

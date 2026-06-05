@@ -14,13 +14,13 @@
 </head>
 <body>
     <header>
-        <nav style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
-                <div style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
-                    <img src="/assets/scanop_icon.png" alt="ScanOp Logo" style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
-                </div>
-                <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
+        <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                <img src="/assets/scanop_icon.png" alt="ScanOp Logo" style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
             </div>
+            <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
+        </div>
+        <nav style="display: flex; align-items: center; gap: 20px;">
             <ul>
                 <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
                 <li><a href="{{ url_for('web_daily_report') }}">Tagesbericht</a></li>
@@ -44,14 +44,24 @@
         </nav>
     </header>
     <main>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+        <div style="margin-bottom: 20px;">
             <h2>Registrierte Laptops</h2>
-            <div class="filter-container" style="width: 300px; display: flex; flex-direction: column; align-items: flex-end;">
-                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)" style="padding: 10px; border-radius: 20px; padding-left: 15px; width: 100%;">
-                <div class="filter-btn-container">
+        </div>
+
+        <div class="glass-container form-container actions-bar" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Globale Aktionen:</h3>
+            <button class="scan-button" data-laptop-alias="all" data-scan-type="QuickScan">QuickScan für ALLE</button>
+            <button class="scan-button" data-laptop-alias="all" data-scan-type="FullScan">FullScan für ALLE</button>
+            <button class="cancel-command-button" data-laptop-alias="all">Alle Befehle abbrechen</button>
+        </div>
+
+        <div class="filter-bar" style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
+            <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
+                <div class="filter-btn-container" style="margin: 0;">
                     <button class="filter-btn" data-state="0" data-filter="online">Online</button>
                     <button class="filter-btn" data-state="0" data-filter="bedrohung">Bedrohung</button>
                 </div>
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)" style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
             </div>
         </div>
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
@@ -122,13 +132,7 @@
         <p>Keine Laptops registriert.</p>
         {% endif %}
 
-        <hr style="margin-top: 30px; margin-bottom: 20px;">
-        <h3>Globale Aktionen</h3>
-        <div>
-            <button class="scan-button" data-laptop-alias="all" data-scan-type="QuickScan">QuickScan für ALLE</button>
-            <button class="scan-button" data-laptop-alias="all" data-scan-type="FullScan">FullScan für ALLE</button>
-            <button class="cancel-command-button" data-laptop-alias="all">Alle Befehle abbrechen</button>
-        </div>
+        {% endif %}
     </main>
     <footer>
         <p>© 2025 ScanOp - Jonas Thiebes</p>
