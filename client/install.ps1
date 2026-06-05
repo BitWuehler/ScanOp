@@ -1,11 +1,11 @@
-<#
+﻿<#
 .SYNOPSIS
-    Finales, robustes Installations- und Update-Skript für den ScanOp Client.
+    Finales, robustes Installations- und Update-Skript fÃ¼r den ScanOp Client.
 .DESCRIPTION
-    Dieses Skript verwendet die bewährte Logik der ursprünglichen Version für
+    Dieses Skript verwendet die bewÃ¤hrte Logik der ursprÃ¼nglichen Version fÃ¼r
     die Alias-Verwaltung und Server-Kommunikation und kombiniert sie mit dem
     robusten Update-Prozess. Die Server-Kommunikation wird jetzt transparent angezeigt.
-    BENÖTIGT ADMINISTRATORBERECHTIGUNGEN.
+    BENÃ–TIGT ADMINISTRATORBERECHTIGUNGEN.
 #>
 
 param(
@@ -19,7 +19,7 @@ param(
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Fehler: Administratorrechte sind erforderlich."
     if (-not $IsUnattendedUpdate) {
-        Read-Host "Bitte führen Sie das Skript über die 'start_installer.cmd'-Datei aus. Drücken Sie Enter zum Schließen."
+        Read-Host "Bitte fÃ¼hren Sie das Skript Ã¼ber die 'start_installer.cmd'-Datei aus. DrÃ¼cken Sie Enter zum SchlieÃŸen."
     }
     exit 1
 }
@@ -44,24 +44,24 @@ Write-Host "Dieses Skript installiert oder aktualisiert den ScanOp-Dienst."
 Write-Host ""
 
 
-# Block B: Technisches Update (falls nötig)
+# Block B: Technisches Update (falls nÃ¶tig)
 # ====================================================================
 if ($isUpdateScenario) {
     $sourceVersionDate = (Get-Item $ClientScriptSourcePath).LastWriteTime
     $installedVersionDate = (Get-Item $ClientScriptDestPath).LastWriteTime
     
     if ($sourceVersionDate -gt $installedVersionDate -or $IsUnattendedUpdate) {
-        Write-Host "Eine neuere Version des Client-Skripts ist verfügbar oder Update wurde erzwungen!" -ForegroundColor Yellow
+        Write-Host "Eine neuere Version des Client-Skripts ist verfÃ¼gbar oder Update wurde erzwungen!" -ForegroundColor Yellow
         if (-not $IsUnattendedUpdate) {
-            $choice = Read-Host "Möchten Sie das technische Update jetzt durchführen? (J/n) [Standard: J]"
+            $choice = Read-Host "MÃ¶chten Sie das technische Update jetzt durchfÃ¼hren? (J/n) [Standard: J]"
             if ($choice.ToLower() -eq 'n') {
-                Write-Host "Update abgebrochen. Das Skript wird beendet." -ForegroundColor Red; Read-Host "Drücken Sie Enter."; exit
+                Write-Host "Update abgebrochen. Das Skript wird beendet." -ForegroundColor Red; Read-Host "DrÃ¼cken Sie Enter."; exit
             }
         }
 
         Write-Host "`nStarte Update-Prozess (inkl. Dienst-Korrektur)..." -ForegroundColor Yellow
         try {
-            # ... (Der bewährte Update-Prozess bleibt erhalten)
+            # ... (Der bewÃ¤hrte Update-Prozess bleibt erhalten)
             Write-Host "1. Stoppe den aktuell laufenden Dienst..."
             Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
             Write-Host "2. Kopiere neue Skript-Version..."
@@ -73,12 +73,12 @@ if ($isUpdateScenario) {
             $taskPrincipal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType ServiceAccount
             $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5) -ExecutionTimeLimit ([TimeSpan]::Zero)
             Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
-            Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "Führt den ScanOp Client für die Server-Kommunikation im Hintergrund aus." -Force
+            Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "FÃ¼hrt den ScanOp Client fÃ¼r die Server-Kommunikation im Hintergrund aus." -Force
             Write-Host "4. Starte den aktualisierten Dienst..."
             Start-ScheduledTask -TaskName $taskName
             Write-Host "`nTechnisches Update erfolgreich abgeschlossen!" -ForegroundColor Green
         } catch {
-            Write-Error "Ein Fehler ist während des Updates aufgetreten: $($_.Exception.Message)"; Read-Host "Drücken Sie Enter."; exit
+            Write-Error "Ein Fehler ist wÃ¤hrend des Updates aufgetreten: $($_.Exception.Message)"; Read-Host "DrÃ¼cken Sie Enter."; exit
         }
     } else {
         Write-Host "-> Die installierte Version ist bereits aktuell." -ForegroundColor Green
@@ -92,7 +92,7 @@ Write-Host "`n--- Konfigurations-Management ---" -ForegroundColor Cyan
 # Variablen initialisieren
 $ServerBaseUrl = ""; $ApiKey = ""; $AliasName = ""
 
-# Priorität 1: Lade bestehende Konfiguration
+# PrioritÃ¤t 1: Lade bestehende Konfiguration
 if ($isUpdateScenario -and (Test-Path $ConfigDestPath)) {
     Write-Host "-> Lade bestehende Konfiguration..."
     try {
@@ -103,7 +103,7 @@ if ($isUpdateScenario -and (Test-Path $ConfigDestPath)) {
     } catch { Write-Warning "Konnte bestehende Konfigurationsdatei nicht lesen." }
 }
 
-# Priorität 2: Vorkonfiguration laden
+# PrioritÃ¤t 2: Vorkonfiguration laden
 if (Test-Path $PreconfigPath) {
     if ([string]::IsNullOrWhiteSpace($ServerBaseUrl) -or [string]::IsNullOrWhiteSpace($ApiKey)) {
         try {
@@ -114,39 +114,48 @@ if (Test-Path $PreconfigPath) {
     }
 }
 
-# Priorität 3: Interaktive Abfrage
+# PrioritÃ¤t 3: Interaktive Abfrage
 if ([string]::IsNullOrWhiteSpace($ServerBaseUrl)) { $ServerBaseUrl = Read-Host -Prompt "Geben Sie die Basis-URL des ScanOp-Servers ein" }
-if ([string]::IsNullOrWhiteSpace($ApiKey)) { $ApiKey = Read-Host -Prompt "Geben Sie den geheimen API-Schlüssel ein" }
+if ([string]::IsNullOrWhiteSpace($ApiKey)) { $ApiKey = Read-Host -Prompt "Geben Sie den geheimen API-SchlÃ¼ssel ein" }
 
 # Alias-Management
 if ($isUpdateScenario -and -not [string]::IsNullOrWhiteSpace($AliasName)) {
     Write-Host "-> Der aktuell konfigurierte Alias ist '$AliasName'."
     if (-not $IsUnattendedUpdate) {
-        $changeAlias = Read-Host "Möchten Sie den Alias ändern? (j/N) [Standard: N]"
+        $changeAlias = Read-Host "MÃ¶chten Sie den Alias Ã¤ndern? (j/N) [Standard: N]"
         if ($changeAlias.ToLower() -eq 'j') {
             $AliasName = Read-Host -Prompt "Geben Sie den neuen, eindeutigen Alias ein"
         }
     }
 } else {
     if (-not $IsUnattendedUpdate) {
-        $AliasName = Read-Host -Prompt "Bitte geben Sie einen eindeutigen Alias für diesen Computer ein"
+        $AliasName = Read-Host -Prompt "Bitte geben Sie einen eindeutigen Alias fÃ¼r diesen Computer ein"
     }
 }
 
 if ([string]::IsNullOrWhiteSpace($AliasName) -or [string]::IsNullOrWhiteSpace($ServerBaseUrl) -or [string]::IsNullOrWhiteSpace($ApiKey)) {
-    Write-Error "Alle Konfigurationsfelder sind erforderlich. Abbruch."; Read-Host "Drücken Sie Enter."; exit 1
+    Write-Error "Alle Konfigurationsfelder sind erforderlich. Abbruch."; Read-Host "DrÃ¼cken Sie Enter."; exit 1
 }
 
+# Verzeichnis erstellen, falls es nicht existiert, BEVOR die Konfiguration geschrieben wird
+if (-not (Test-Path $InstallDir)) {
+    New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
+}
+
+# Standard-Werte fÃ¼r Repo, falls leer
+$finalRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl }
+$finalVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
+
 # Konfiguration in Datei speichern
-$finalConfigObject = [PSCustomObject]@{ AliasName = $AliasName; ServerBaseUrl = $ServerBaseUrl.TrimEnd('/'); ApiKey = $ApiKey; PollingIntervalSeconds = 60; InterimCheckIntervalMinutes = 30 }
+$finalConfigObject = [PSCustomObject]@{ AliasName = $AliasName; ServerBaseUrl = $ServerBaseUrl.TrimEnd('/'); ApiKey = $ApiKey; GitHubRepoUrl = $finalRepoUrl; GitHubVersion = $finalVersion; PollingIntervalSeconds = 60; InterimCheckIntervalMinutes = 30 }
 $finalConfigObject | ConvertTo-Json -Depth 3 | Set-Content -Path $ConfigDestPath -Encoding UTF8 -Force
 Write-Host "-> Konfiguration wurde lokal gespeichert." -ForegroundColor Green
 
 
 # Block D: Server-Synchronisation (wiederhergestellte Original-Logik)
 # ====================================================================
-Write-Host "`nPrüfe Client-Registrierung am Server für Alias '$AliasName'..." -ForegroundColor Yellow
-$checkUrl = "$($finalConfigObject.ServerBaseUrl)/laptops/$AliasName"
+Write-Host "`nPrÃ¼fe Client-Registrierung am Server fÃ¼r Alias '$AliasName'..." -ForegroundColor Yellow
+$checkUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops/$AliasName"
 $headers = @{ "X-API-Key" = $finalConfigObject.ApiKey }
 $clientExistsOnServer = $false
 
@@ -160,14 +169,14 @@ try {
     if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 404) {
         Write-Host "-> Client mit Alias '$AliasName' ist noch nicht auf dem Server registriert."
     } else {
-        Write-Error "Fehler bei der Prüfung des Clients: $($_.Exception.Message)"; Read-Host "Drücken Sie Enter."; exit 1
+        Write-Error "Fehler bei der PrÃ¼fung des Clients: $($_.Exception.Message)"; Read-Host "DrÃ¼cken Sie Enter."; exit 1
     }
 }
 
 if (-NOT $clientExistsOnServer) {
     $Hostname = $env:COMPUTERNAME
     Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
-    $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/laptops"
+    $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
     $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
     
     # NEU: Transparente Ausgabe
@@ -178,24 +187,23 @@ if (-NOT $clientExistsOnServer) {
         Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
         Write-Host "-> Client erfolgreich beim Server registriert!" -ForegroundColor Green
     } catch {
-        $errorMessage = "Fehler bei der Registrierung des Clients."; if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode; $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }; $errorMessage += " (HTTP $statusCode): $responseBody"; if ($statusCode -eq 400) { $errorMessage += "`n-> MÖGLICHE URSACHE: Der Alias existiert bereits." } } else { $errorMessage += ": $($_.Exception.Message)" }; Write-Error $errorMessage; Read-Host "Drücken Sie Enter."; exit 1
+        $errorMessage = "Fehler bei der Registrierung des Clients."; if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode; $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }; $errorMessage += " (HTTP $statusCode): $responseBody"; if ($statusCode -eq 400) { $errorMessage += "`n-> MÃ–GLICHE URSACHE: Der Alias existiert bereits." } } else { $errorMessage += ": $($_.Exception.Message)" }; Write-Error $errorMessage; Read-Host "DrÃ¼cken Sie Enter."; exit 1
     }
 }
 
 # Block E: Neuinstallation-spezifische Aktionen
 # ====================================================================
 if (-not $isUpdateScenario) {
-    New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
     Copy-Item -Path $ClientScriptSourcePath -Destination $ClientScriptDestPath -Force
     $taskUser = "NT AUTHORITY\SYSTEM"
     $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ClientScriptDestPath`""
     $taskTrigger = New-ScheduledTaskTrigger -AtStartup
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType ServiceAccount
     $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5) -ExecutionTimeLimit ([TimeSpan]::Zero)
-    Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "Führt den ScanOp Client für die Server-Kommunikation im Hintergrund aus." -Force
+    Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "FÃ¼hrt den ScanOp Client fÃ¼r die Server-Kommunikation im Hintergrund aus." -Force
     Write-Host "-> Hintergrunddienst '$taskName' erfolgreich installiert."
 
-    $startChoice = Read-Host "Möchten Sie den Dienst jetzt sofort starten? (J/n) [Standard: J]"
+    $startChoice = Read-Host "MÃ¶chten Sie den Dienst jetzt sofort starten? (J/n) [Standard: J]"
     if ($startChoice.ToLower() -ne 'n') {
         Start-ScheduledTask -TaskName $taskName
         Write-Host "-> Dienst wurde gestartet." -ForegroundColor Green
@@ -207,5 +215,5 @@ if (-not $isUpdateScenario) {
 Write-Host ""
 Write-Host "Vorgang erfolgreich abgeschlossen." -ForegroundColor Green
 if (-not $IsUnattendedUpdate) {
-    Read-Host "Drücken Sie Enter zum Schließen."
+    Read-Host "DrÃ¼cken Sie Enter zum SchlieÃŸen."
 }

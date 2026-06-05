@@ -1,11 +1,11 @@
-<#
+﻿<#
 .SYNOPSIS
-    Gehärtetes Client-Skript zum Pollen von Befehlen mit Failsafe-Timeout und robuster Scan-Erkennung.
+    GehÃ¤rtetes Client-Skript zum Pollen von Befehlen mit Failsafe-Timeout und robuster Scan-Erkennung.
 .DESCRIPTION
-    Diese finale Version verwendet die bewährte Job-Start-Logik aus der funktionierenden
-    Referenzversion und kombiniert sie mit der robusten dreifachen Prüfung 
+    Diese finale Version verwendet die bewÃ¤hrte Job-Start-Logik aus der funktionierenden
+    Referenzversion und kombiniert sie mit der robusten dreifachen PrÃ¼fung 
     (Job-Status, Failsafe-Timeout, Event-Log-Analyse) zur Erkennung des Scan-Abschlusses.
-    BENÖTIGT ADMINISTRATORBERECHTIGUNGEN für Start-MpScan und Get-WinEvent.
+    BENÃ–TIGT ADMINISTRATORBERECHTIGUNGEN fÃ¼r Start-MpScan und Get-WinEvent.
 #>
 
 # --- Konfiguration und Initialisierung ---
@@ -48,7 +48,8 @@ function Write-Log {
     }
 }
 
-# --- ÄUSSERE SCHLEIFE FÜR MAXIMALE ROBUSTHEIT ---
+# --- Ã„USSERE SCHLEIFE FÃœR MAXIMALE ROBUSTHEIT ---
+$Global:FatalErrorCount = 0
 while ($true) {
     try {
         Write-Log -Message "================== Skript-Zyklus wird gestartet =================="
@@ -79,15 +80,15 @@ while ($true) {
             } catch { Write-Log -Level WARN -Message "Fehler beim Laden von '$LastReportTimeFilePath'." }
         }
         if ($null -eq $Global:LastSuccessfulReportTimeUTC) {
-            Write-Log -Message "Keine gültige letzte Report-Zeit gefunden."
+            Write-Log -Message "Keine gÃ¼ltige letzte Report-Zeit gefunden."
             $Global:LastSuccessfulReportTimeUTC = (Get-Date "1970-01-01").ToUniversalTime() 
         }
 
-        Write-Log -Message "Client konfiguriert für Alias: $AliasName / Server URL: $ServerBaseUrl / Version: $ClientVersion"
+        Write-Log -Message "Client konfiguriert fÃ¼r Alias: $AliasName / Server URL: $ServerBaseUrl / Version: $ClientVersion"
         $CommandUrl = "$ServerBaseUrl/clientcommands/$AliasName?version=$ClientVersion"; $ReportUrl = "$ServerBaseUrl/scanreports/"
 
-        # --- Hilfsfunktionen (unverändert) ---
-        function Send-ScanReport { param( [Parameter(Mandatory=$true)][string]$ScanTime, [Parameter(Mandatory=$true)][string]$ScanType, [Parameter(Mandatory=$true)][string]$ScanResultMessage, [Parameter(Mandatory=$true)][bool]$ThreatsFound, [string]$ThreatDetails = $null ); Write-Log -Message "Bereite Scan-Bericht ($ScanType) für Versand vor."; if ([string]::IsNullOrWhiteSpace($ScanTime)) { $ScanTime = (Get-Date "1970-01-01").ToUniversalTime().ToString("o") } ; if ([string]::IsNullOrWhiteSpace($ScanType)) { $ScanType = "Unbekannt" } ; if ([string]::IsNullOrWhiteSpace($ScanResultMessage)) { $ScanResultMessage = "Keine Meldung" } ; $CleanResultMessage = $ScanResultMessage -replace '[\x00-\x1F\x7F]', '' ; $CleanThreatDetails = if ($ThreatDetails) { $ThreatDetails -replace '[\x00-\x1F\x7F]', '' } else { $null } ; $payloadContent = @{ laptop_identifier = $AliasName; client_scan_time = $ScanTime; scan_type = $ScanType; scan_result_message = $CleanResultMessage; threats_found = $ThreatsFound }; if ($null -ne $CleanThreatDetails -and (-not [string]::IsNullOrWhiteSpace($CleanThreatDetails))) { $payloadContent.threat_details = $CleanThreatDetails } else { $payloadContent.threat_details = $null } ; $payloadBodyJson = $payloadContent | ConvertTo-Json -Depth 5 -Compress; $utf8Encoding = [System.Text.Encoding]::UTF8; $payloadBytes = $utf8Encoding.GetBytes($payloadBodyJson); $requestHeaders = @{ "Content-Type" = "application/json; charset=utf-8"; "X-API-Key" = $ApiKey }; Write-Log -Message "Sende Bericht... (Länge: $($payloadBytes.Length) bytes)"; $ErrorActionPreferenceBackup = $ErrorActionPreference; $ErrorActionPreference = "Stop"; try { Invoke-RestMethod -Uri $ReportUrl -Method Post -Body $payloadBytes -Headers $requestHeaders -TimeoutSec 120; Write-Log -Message "Scan-Bericht erfolgreich an Server gesendet."; $Global:LastSuccessfulReportTimeUTC = (Get-Date).ToUniversalTime(); try { ($Global:LastSuccessfulReportTimeUTC.ToString("o") | ConvertTo-Json -Compress) | Set-Content -Path $LastReportTimeFilePath -Force -Encoding UTF8; Write-Log -Message "Letzte erfolgreiche Report-Zeit aktualisiert: $($Global:LastSuccessfulReportTimeUTC.ToLocalTime())" } catch { Write-Log -Level WARN -Message "Fehler beim Speichern von '$LastReportTimeFilePath': $($_.Exception.Message)" }; return $true } catch { $CaughtException = $_; Write-Log -Level ERROR -Message "FEHLER bei Send-ScanReport: $($CaughtException.ToString())"; if ($CaughtException.Exception -is [System.Net.WebException] -and $null -ne $CaughtException.Exception.Response) { $webEx = $CaughtException.Exception; $httpResponse = $webEx.Response; $actualHttpStatusCode = [int]$httpResponse.StatusCode; Write-Log -Level ERROR -Message "  HTTP Status: $actualHttpStatusCode"; try { $responseStream = $httpResponse.GetResponseStream(); $streamReader = New-Object System.IO.StreamReader($responseStream, [System.Text.Encoding]::UTF8); $errorBodyContent = $streamReader.ReadToEnd(); $streamReader.Close(); $responseStream.Close(); Write-Log -Level ERROR -Message "  Fehler-Body vom Server: $errorBodyContent" } catch { Write-Log -Level ERROR -Message "  Zusätzlicher Fehler beim Lesen des Fehler-Bodys: $($_.Exception.Message)" } }; return $false } finally { $ErrorActionPreference = $ErrorActionPreferenceBackup } }; function ConvertFrom-DefenderEvent { param( [Parameter(Mandatory=$true)] $Event ); $eventTimeUTC = $Event.TimeCreated.ToUniversalTime().ToString("o"); $simplified = @{ Message = "Event $($Event.Id): " + (($Event.Message -replace '[\x00-\x1F\x7F]', '').Trim() -split '\r?\n')[0]; ThreatsFound = $false; ThreatDetails = $null }; if ($simplified.Message -match "Bedrohung gefunden") { $simplified.ThreatsFound = $true }; if ($Event.Id -in (1002, 1116, 1117, 1118)) { $simplified.ThreatsFound = $true }; if ($Event.Message -match "Name: (.*?)\s*Pfad: (.*?)\s*Aktion: (.*?)\s*") { $simplified.ThreatDetails = "Name: $($Matches[1].Trim()), Pfad: $($Matches[2].Trim()), Aktion: $($Matches[3].Trim())" }; return [PSCustomObject]$simplified }
+        # --- Hilfsfunktionen (unverÃ¤ndert) ---
+        function Send-ScanReport { param( [Parameter(Mandatory=$true)][string]$ScanTime, [Parameter(Mandatory=$true)][string]$ScanType, [Parameter(Mandatory=$true)][string]$ScanResultMessage, [Parameter(Mandatory=$true)][bool]$ThreatsFound, [string]$ThreatDetails = $null ); Write-Log -Message "Bereite Scan-Bericht ($ScanType) fÃ¼r Versand vor."; if ([string]::IsNullOrWhiteSpace($ScanTime)) { $ScanTime = (Get-Date "1970-01-01").ToUniversalTime().ToString("o") } ; if ([string]::IsNullOrWhiteSpace($ScanType)) { $ScanType = "Unbekannt" } ; if ([string]::IsNullOrWhiteSpace($ScanResultMessage)) { $ScanResultMessage = "Keine Meldung" } ; $CleanResultMessage = $ScanResultMessage -replace '[\x00-\x1F\x7F]', '' ; $CleanThreatDetails = if ($ThreatDetails) { $ThreatDetails -replace '[\x00-\x1F\x7F]', '' } else { $null } ; $payloadContent = @{ laptop_identifier = $AliasName; client_scan_time = $ScanTime; scan_type = $ScanType; scan_result_message = $CleanResultMessage; threats_found = $ThreatsFound }; if ($null -ne $CleanThreatDetails -and (-not [string]::IsNullOrWhiteSpace($CleanThreatDetails))) { $payloadContent.threat_details = $CleanThreatDetails } else { $payloadContent.threat_details = $null } ; $payloadBodyJson = $payloadContent | ConvertTo-Json -Depth 5 -Compress; $utf8Encoding = [System.Text.Encoding]::UTF8; $payloadBytes = $utf8Encoding.GetBytes($payloadBodyJson); $requestHeaders = @{ "Content-Type" = "application/json; charset=utf-8"; "X-API-Key" = $ApiKey }; Write-Log -Message "Sende Bericht... (LÃ¤nge: $($payloadBytes.Length) bytes)"; $ErrorActionPreferenceBackup = $ErrorActionPreference; $ErrorActionPreference = "Stop"; try { Invoke-RestMethod -Uri $ReportUrl -Method Post -Body $payloadBytes -Headers $requestHeaders -TimeoutSec 120; Write-Log -Message "Scan-Bericht erfolgreich an Server gesendet."; $Global:LastSuccessfulReportTimeUTC = (Get-Date).ToUniversalTime(); try { ($Global:LastSuccessfulReportTimeUTC.ToString("o") | ConvertTo-Json -Compress) | Set-Content -Path $LastReportTimeFilePath -Force -Encoding UTF8; Write-Log -Message "Letzte erfolgreiche Report-Zeit aktualisiert: $($Global:LastSuccessfulReportTimeUTC.ToLocalTime())" } catch { Write-Log -Level WARN -Message "Fehler beim Speichern von '$LastReportTimeFilePath': $($_.Exception.Message)" }; return $true } catch { $CaughtException = $_; Write-Log -Level ERROR -Message "FEHLER bei Send-ScanReport: $($CaughtException.ToString())"; if ($CaughtException.Exception -is [System.Net.WebException] -and $null -ne $CaughtException.Exception.Response) { $webEx = $CaughtException.Exception; $httpResponse = $webEx.Response; $actualHttpStatusCode = [int]$httpResponse.StatusCode; Write-Log -Level ERROR -Message "  HTTP Status: $actualHttpStatusCode"; try { $responseStream = $httpResponse.GetResponseStream(); $streamReader = New-Object System.IO.StreamReader($responseStream, [System.Text.Encoding]::UTF8); $errorBodyContent = $streamReader.ReadToEnd(); $streamReader.Close(); $responseStream.Close(); Write-Log -Level ERROR -Message "  Fehler-Body vom Server: $errorBodyContent" } catch { Write-Log -Level ERROR -Message "  ZusÃ¤tzlicher Fehler beim Lesen des Fehler-Bodys: $($_.Exception.Message)" } }; return $false } finally { $ErrorActionPreference = $ErrorActionPreferenceBackup } }; function ConvertFrom-DefenderEvent { param( [Parameter(Mandatory=$true)] $Event ); $eventTimeUTC = $Event.TimeCreated.ToUniversalTime().ToString("o"); $simplified = @{ Message = "Event $($Event.Id): " + (($Event.Message -replace '[\x00-\x1F\x7F]', '').Trim() -split '\r?\n')[0]; ThreatsFound = $false; ThreatDetails = $null }; if ($simplified.Message -match "Bedrohung gefunden") { $simplified.ThreatsFound = $true }; if ($Event.Id -in (1002, 1116, 1117, 1118)) { $simplified.ThreatsFound = $true }; if ($Event.Message -match "Name: (.*?)\s*Pfad: (.*?)\s*Aktion: (.*?)\s*") { $simplified.ThreatDetails = "Name: $($Matches[1].Trim()), Pfad: $($Matches[2].Trim()), Aktion: $($Matches[3].Trim())" }; return [PSCustomObject]$simplified }
         
         # --- HAUPT-POLLING-SCHLEIFE ---
         $currentRetryDelay = $InitialRetryDelaySeconds
@@ -95,7 +96,7 @@ while ($true) {
         while ($true) {
             $networkOperationSuccess = $true
 
-            # --- 1. JOB-STATUS-PRÜFUNG mit FAILSAFE ---
+            # --- 1. JOB-STATUS-PRÃœFUNG mit FAILSAFE ---
             if ($null -ne $Script:ActiveScanJob) {
 
                 $isTimedOut = $false; $completionEvent = $null
@@ -112,7 +113,7 @@ while ($true) {
                 if ($Script:ActiveScanJob.State -in @('Completed', 'Failed', 'Stopped') -or $completionEvent -or $isTimedOut) {
                     Write-Log -Message "Scan-Abschluss erkannt. Grund: Job-Status='$($Script:ActiveScanJob.State)', Event-Gefunden='$($completionEvent -ne $null)', Timeout='$isTimedOut'."
                     if ($isTimedOut -and $Script:ActiveScanJob.State -notlike 'Stopped') {
-                        Write-Log -Level WARN -Message "Scan hat das Zeitlimit von $timeoutLimitMinutes Minuten überschritten. Breche Job ab."
+                        Write-Log -Level WARN -Message "Scan hat das Zeitlimit von $timeoutLimitMinutes Minuten Ã¼berschritten. Breche Job ab."
                         Stop-Job -Job $Script:ActiveScanJob -Force
                     }
 
@@ -120,7 +121,7 @@ while ($true) {
                     $reportScanTime = $Script:ScanInitiationTimeUTC.ToString("o"); $reportResultMessageAggregator = [System.Text.StringBuilder]::new(); $reportThreatDetailsAggregator = [System.Text.StringBuilder]::new(); $reportThreatsFound = $false
 
                     [void]$reportResultMessageAggregator.AppendLine("Scan ($($Script:ScanTypeForActiveJob)) initiiert $($reportScanTime) wurde beendet. Job-Status: $($Script:ActiveScanJob.State).")
-                    if ($isTimedOut) { $reportThreatsFound = $true; [void]$reportResultMessageAggregator.AppendLine("FEHLER: Scan wurde nach Überschreiten des Zeitlimits von $timeoutLimitMinutes Minuten abgebrochen.") }
+                    if ($isTimedOut) { $reportThreatsFound = $true; [void]$reportResultMessageAggregator.AppendLine("FEHLER: Scan wurde nach Ãœberschreiten des Zeitlimits von $timeoutLimitMinutes Minuten abgebrochen.") }
                     if ($Script:ActiveScanJob.State -ne 'Completed' -or ($scanJobResult -is [System.Management.Automation.ErrorRecord])) { $reportThreatsFound = $true; [void]$reportResultMessageAggregator.AppendLine("Scan-Job meldete Fehler."); [void]$reportThreatDetailsAggregator.AppendLine("Job-Fehler: $($scanJobResult | Out-String)") }
 
                     $finalScanEvent = $completionEvent
@@ -138,12 +139,12 @@ while ($true) {
                     }
 
                     if (Send-ScanReport -ScanTime $reportScanTime -ScanType $Script:ScanTypeForActiveJob -ScanResultMessage $reportResultMessageAggregator.ToString().Trim() -ThreatsFound $reportThreatsFound -ThreatDetails $reportThreatDetailsAggregator.ToString().Trim()) {
-                        Write-Log -Message "Entferne abgeschlossenen Job und setze Zustand zurück."
+                        Write-Log -Message "Entferne abgeschlossenen Job und setze Zustand zurÃ¼ck."
                         Remove-Job -Job $Script:ActiveScanJob -Force
                         $Script:ActiveScanJob = $null; $Script:ScanInitiationTimeUTC = $null; $Script:ScanTypeForActiveJob = $null
                     } else { $networkOperationSuccess = $false; Write-Log -Level WARN -Message "Fehler beim Melden des Job-Ergebnisses. Job wird behalten, Versand wird erneut versucht." }
                 } else {
-                    Write-Log -Message "Ein Scan (Typ: $($Script:ScanTypeForActiveJob), Laufzeit: $([int]$elapsedMinutes) von $timeoutLimitMinutes min) läuft noch im Hintergrund. Warte auf Abschluss..."
+                    Write-Log -Message "Ein Scan (Typ: $($Script:ScanTypeForActiveJob), Laufzeit: $([int]$elapsedMinutes) von $timeoutLimitMinutes min) lÃ¤uft noch im Hintergrund. Warte auf Abschluss..."
                 }
             }
 
@@ -169,7 +170,7 @@ while ($true) {
                                         try { 
                                             Start-MpScan -ScanType $st -ErrorAction Stop 
                                         } catch { 
-                                            # Diese Fehlerbehandlung ist entscheidend, um Fehler aus dem Job zurückzugeben
+                                            # Diese Fehlerbehandlung ist entscheidend, um Fehler aus dem Job zurÃ¼ckzugeben
                                             Write-Error "Fehler in Start-MpScan im Job: $($_.Exception.Message)"; return $_
                                         }
                                     } -ArgumentList $scanTypeToUse
@@ -177,7 +178,7 @@ while ($true) {
                                     Write-Log -Message "Scan als Job gestartet mit ID: $($Script:ActiveScanJob.Id)."
                                 }
                                 "UPDATE_CLIENT" {
-                                    Write-Log -Message "Aktion: Führe Client-Update durch..."
+                                    Write-Log -Message "Aktion: FÃ¼hre Client-Update durch..."
                                     try {
                                         if ($null -ne $commandResponse.payload) {
                                             $payloadObj = $commandResponse.payload | ConvertFrom-Json
@@ -195,12 +196,12 @@ while ($true) {
                                             Write-Log -Message "Installer heruntergeladen. Starte Update-Prozess im Hintergrund und beende mich."
                                             
                                             # Installer muss die anderen Dateien nachladen. Da das install.ps1 interaktiv ist, 
-                                            # müssen wir eventuell Parameter übergeben, falls es diese unterstützt, oder einfach blind starten.
-                                            # Wir übergeben hier Repository-URL und Version als Argumente an das install.ps1,
-                                            # dafür müssen wir sicherstellen, dass install.ps1 das unterstützt, oder wir laden hier alles selbst herunter.
-                                            # Da der Nutzer "install.ps1" im letzten Task aktualisiert hat, gehen wir davon aus, dass wir es aufrufen können.
+                                            # mÃ¼ssen wir eventuell Parameter Ã¼bergeben, falls es diese unterstÃ¼tzt, oder einfach blind starten.
+                                            # Wir Ã¼bergeben hier Repository-URL und Version als Argumente an das install.ps1,
+                                            # dafÃ¼r mÃ¼ssen wir sicherstellen, dass install.ps1 das unterstÃ¼tzt, oder wir laden hier alles selbst herunter.
+                                            # Da der Nutzer "install.ps1" im letzten Task aktualisiert hat, gehen wir davon aus, dass wir es aufrufen kÃ¶nnen.
                                             
-                                            $startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installerPath`" -RepoUrl `"$repoUrl`" -Version `"$version`" -IsUpdate `$true"
+                                            $startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installerPath`" -RepoUrl `"$repoUrl`" -Version `"$version`" -IsUnattendedUpdate"
                                             Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs -Verb RunAs
                                             
                                             Exit 0
@@ -220,16 +221,36 @@ while ($true) {
 
             # --- 3. WARTEZEIT ---
             if (-not $networkOperationSuccess) {
-                Write-Log -Level WARN -Message "Netzwerkproblem erkannt. Nächster Versuch in $currentRetryDelay Sekunden."
+                Write-Log -Level WARN -Message "Netzwerkproblem erkannt. NÃ¤chster Versuch in $currentRetryDelay Sekunden."
                 Start-Sleep -Seconds $currentRetryDelay
                 $currentRetryDelay = [math]::Min($currentRetryDelay * 2, $MaxRetryDelaySeconds)
             } else {
-                Write-Log -Message "Warte $PollingIntervalSeconds Sekunden bis zum nächsten Zyklus..."
+                $Global:FatalErrorCount = 0
+                Write-Log -Message "Warte $PollingIntervalSeconds Sekunden bis zum nÃ¤chsten Zyklus..."
                 Start-Sleep -Seconds $PollingIntervalSeconds
             }
         } # Ende innere while
     } catch {
-        Write-Log -Level ERROR -Message "FATALER FEHLER in der Hauptlogik: $($_.Exception.ToString()). Das Skript wird in 60 Sekunden versuchen, neu zu starten."
+        $Global:FatalErrorCount++
+        Write-Log -Level ERROR -Message "FATALER FEHLER in der Hauptlogik: $($_.Exception.ToString()). Fehleranzahl: $Global:FatalErrorCount/5"
+        
+        if ($Global:FatalErrorCount -ge 5) {
+            Write-Log -Level ERROR -Message "Zu viele aufeinanderfolgende Fehler! Versuche automatische Selbstheilung (Update)..."
+            try {
+                $repoUrl = if ($Config.GitHubRepoUrl) { $Config.GitHubRepoUrl.TrimEnd('/') } else { "https://github.com/BitWuehler/ScanOp" }
+                $version = if ($Config.GitHubVersion) { $Config.GitHubVersion } else { "main" }
+                $installerUrl = "$repoUrl/raw/$version/client/install.ps1"
+                $installerPath = Join-Path -Path $ScriptDir -ChildPath "install_update.ps1"
+                Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+                $startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installerPath`" -RepoUrl `"$repoUrl`" -Version `"$version`" -IsUnattendedUpdate"
+                Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs -Verb RunAs
+                Exit 0
+            } catch {
+                Write-Log -Level ERROR -Message "Selbstheilung fehlgeschlagen: $($_.Exception.Message)"
+            }
+        }
+        
+        Write-Log -Message "Das Skript wird in 60 Sekunden versuchen, neu zu starten."
         Start-Sleep -Seconds 60
     } finally {
         if ($null -ne $Script:ActiveScanJob) {
@@ -238,4 +259,4 @@ while ($true) {
         }
         Write-Log -Message "================== Skript-Zyklus beendet =================="
     }
-} # Ende äußere while
+} # Ende Ã¤uÃŸere while
