@@ -64,6 +64,7 @@ jobs:
       - name: Update Version in Script
         run: |
           sed -i 's/\$ClientVersion = ".*"/\$ClientVersion = "${{ github.ref_name }}"/g' client/ScanOpClient.ps1
+          sed -i 's/\[string\]\$Version = ""/\[string\]\$Version = "${{ github.ref_name }}"/g' client/install.ps1
 
       - name: Zip Client Folder
         run: |
