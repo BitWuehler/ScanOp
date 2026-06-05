@@ -61,6 +61,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Update Version in Script
+        run: |
+          sed -i 's/\$ClientVersion = ".*"/\$ClientVersion = "${{ github.ref_name }}"/g' client/ScanOpClient.ps1
+
       - name: Zip Client Folder
         run: |
           cd client
