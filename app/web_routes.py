@@ -52,7 +52,7 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
     for laptop_instance in all_laptops_db:
         status_info = {"text": "Unbekannt", "color_class": "status-unknown"} 
         if laptop_instance.last_scan_time is not None:
-            last_scan_time_aware = laptop_instance.last_scan_time.astimezone(timezone.utc)
+            last_scan_time_aware = laptop_instance.last_scan_time.replace(tzinfo=timezone.utc)
             time_since_last_scan = now_utc - last_scan_time_aware
             if laptop_instance.last_scan_threats_found is True:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
@@ -78,11 +78,19 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
     
     # ... (Rest der CSV-Logik hier einfügen)
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    from zoneinfo import ZoneInfo
+    berlin_tz = ZoneInfo("Europe/Berlin")
+
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
-    writer.writerow(["Alias", "Hostname", "Letzter Scan (UTC)", "Status", "Bedrohungen"])
+    writer.writerow(["Alias", "Hostname", "Letzter Scan (Lokalzeit)", "Status", "Bedrohungen"])
     for laptop in all_laptops_db:
-        writer.writerow([laptop.alias_name, laptop.hostname, to_utc_iso_string(laptop.last_scan_time), "OK", "Nein"]) # Beispiel
+        if laptop.last_scan_time:
+            scan_time_berlin = laptop.last_scan_time.replace(tzinfo=timezone.utc).astimezone(berlin_tz)
+            scan_time_str = scan_time_berlin.strftime('%d.%m.%Y %H:%M:%S')
+        else:
+            scan_time_str = "N/A"
+        writer.writerow([laptop.alias_name, laptop.hostname, scan_time_str, "OK", "Nein"]) # Beispiel
     output.seek(0)
     
     return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8-sig')), media_type="text/csv", headers={"Content-Disposition": f"attachment;filename=scanop_tagesbericht_{target_date.isoformat()}.csv"})
@@ -111,7 +119,7 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
     for laptop in all_laptops_db:
         status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
-            last_scan_time_aware = laptop.last_scan_time.astimezone(timezone.utc)
+            last_scan_time_aware = laptop.last_scan_time.replace(tzinfo=timezone.utc)
             if laptop.last_scan_threats_found is True:
                 status_text, color_class = "Bedrohung(en)!", "status-red"
             elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
@@ -140,7 +148,7 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
         color_class = "status-red"
         
         if laptop.last_api_contact:
-            contact_aware = laptop.last_api_contact.astimezone(timezone.utc)
+            contact_aware = laptop.last_api_contact.replace(tzinfo=timezone.utc)
             if (now_utc - contact_aware) <= timedelta(minutes=5):
                 is_online = True
                 status_text = "Online"
