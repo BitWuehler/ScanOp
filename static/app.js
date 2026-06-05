@@ -229,6 +229,19 @@ document.addEventListener('DOMContentLoaded', () => {
         exportPdfBtn.title = "PDF-Bibliothek nicht geladen";
     }
     
+    // ==========================================
+    // UI AND LOGIC OVERHAUL START
+    // ==========================================
+
+    // Scroll Position Persistence
+    const scrollPos = sessionStorage.getItem('scanop_scroll_pos');
+    if (scrollPos !== null) {
+        window.scrollTo(0, parseInt(scrollPos, 10));
+    }
+    window.addEventListener('beforeunload', () => {
+        sessionStorage.setItem('scanop_scroll_pos', window.scrollY);
+    });
+
     // Settings Dropdown Logic
     const settingsToggleBtn = document.getElementById('settings-toggle-btn');
     const settingsDropdown = document.getElementById('settings-dropdown');
@@ -244,20 +257,101 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Global Filter Logic
+    // Global Settings (Repo URL & Version)
+    const repoInput = document.getElementById('settings_github_repo_url');
+    const versionInput = document.getElementById('settings_github_version');
+
+    if (repoInput && versionInput) {
+        const savedRepo = localStorage.getItem('scanop_repo_url');
+        const savedVersion = localStorage.getItem('scanop_version');
+        if (savedRepo) repoInput.value = savedRepo;
+        if (savedVersion) versionInput.value = savedVersion;
+
+        repoInput.addEventListener('input', (e) => localStorage.setItem('scanop_repo_url', e.target.value));
+        versionInput.addEventListener('input', (e) => localStorage.setItem('scanop_version', e.target.value));
+    }
+
+    // Advanced Filtering Logic
     const globalFilterToggle = document.getElementById('global-filter-toggle');
     const filterInput = document.getElementById('table-filter-input');
-    
-    function applyFilter(searchTerm) {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+
+    function applyFilters() {
+        const searchTerm = filterInput ? filterInput.value.toLowerCase() : '';
         const rows = document.querySelectorAll('tbody tr');
+        
+        // Get active button states
+        const filters = {};
+        filterBtns.forEach(btn => {
+            filters[btn.dataset.filter] = btn.dataset.state; // '0', '1', '2'
+        });
+
+        const targetVersion = versionInput ? versionInput.value.trim() : '';
+
         rows.forEach(row => {
+            let visible = true;
             const text = row.textContent.toLowerCase();
-            if (text.includes(searchTerm.toLowerCase())) {
+            
+            // 1. Text Search
+            if (searchTerm && !text.includes(searchTerm)) {
+                visible = false;
+            }
+
+            // 2. Button Filters
+            if (visible) {
+                // 'online' filter
+                if (filters['online']) {
+                    const isOnline = text.includes('online'); // simple heuristic
+                    if (filters['online'] === '1' && !isOnline) visible = false;
+                    if (filters['online'] === '2' && isOnline) visible = false;
+                }
+
+                // 'bedrohung' filter
+                if (filters['bedrohung']) {
+                    const hasThreat = text.includes('bedrohung');
+                    if (filters['bedrohung'] === '1' && !hasThreat) visible = false;
+                    if (filters['bedrohung'] === '2' && hasThreat) visible = false;
+                }
+
+                // 'aktuell' filter (Client Updates Page)
+                if (filters['aktuell']) {
+                    const versionCell = row.querySelector('.version-cell');
+                    if (versionCell) {
+                        const isCurrent = versionCell.textContent.trim() === targetVersion;
+                        if (filters['aktuell'] === '1' && !isCurrent) visible = false;
+                        if (filters['aktuell'] === '2' && isCurrent) visible = false;
+                    }
+                }
+            }
+
+            if (visible) {
                 row.classList.remove('hidden-row');
             } else {
                 row.classList.add('hidden-row');
             }
         });
+    }
+
+    // Handle Button Clicks (3-State Toggle)
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            let state = parseInt(btn.dataset.state);
+            state = (state + 1) % 3;
+            btn.dataset.state = state;
+            
+            applyFilters();
+            
+            if (globalFilterToggle && globalFilterToggle.checked) {
+                saveGlobalFilterState();
+            }
+        });
+    });
+
+    function saveGlobalFilterState() {
+        if (filterInput) localStorage.setItem('scanop_filter_text', filterInput.value);
+        const btnStates = {};
+        filterBtns.forEach(btn => { btnStates[btn.dataset.filter] = btn.dataset.state; });
+        localStorage.setItem('scanop_filter_btns', JSON.stringify(btnStates));
     }
 
     if (globalFilterToggle) {
@@ -268,27 +362,37 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('scanop_global_filter_enabled', e.target.checked);
             if (!e.target.checked) {
                 localStorage.removeItem('scanop_filter_text');
-            } else if (filterInput) {
-                localStorage.setItem('scanop_filter_text', filterInput.value);
+                localStorage.removeItem('scanop_filter_btns');
+            } else {
+                saveGlobalFilterState();
             }
         });
     }
 
-    if (filterInput) {
+    if (filterInput || filterBtns.length > 0) {
         const isGlobalEnabled = localStorage.getItem('scanop_global_filter_enabled') === 'true';
         if (isGlobalEnabled) {
-            const savedText = localStorage.getItem('scanop_filter_text') || '';
-            filterInput.value = savedText;
-            applyFilter(savedText);
-        }
-
-        filterInput.addEventListener('input', (e) => {
-            const term = e.target.value;
-            applyFilter(term);
-            if (globalFilterToggle && globalFilterToggle.checked) {
-                localStorage.setItem('scanop_filter_text', term);
+            if (filterInput) {
+                filterInput.value = localStorage.getItem('scanop_filter_text') || '';
             }
-        });
+            try {
+                const savedBtns = JSON.parse(localStorage.getItem('scanop_filter_btns') || '{}');
+                filterBtns.forEach(btn => {
+                    if (savedBtns[btn.dataset.filter]) {
+                        btn.dataset.state = savedBtns[btn.dataset.filter];
+                    }
+                });
+            } catch(e) {}
+        }
+        
+        if (filterInput) {
+            filterInput.addEventListener('input', () => {
+                applyFilters();
+                if (globalFilterToggle && globalFilterToggle.checked) saveGlobalFilterState();
+            });
+        }
+        
+        applyFilters(); // Initial filter apply
     }
 
     // Updates Page Checkbox Logic
@@ -296,12 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const laptopCheckboxes = document.querySelectorAll('.laptop-checkbox');
     const selectAllBtn = document.getElementById('select-all-btn');
     const selectOutdatedBtn = document.getElementById('select-outdated-btn');
-    const githubVersionInput = document.getElementById('github_version');
 
     if (masterCheckbox) {
         masterCheckbox.addEventListener('change', (e) => {
             laptopCheckboxes.forEach(cb => {
-                // only check if row is not hidden by filter
                 const row = cb.closest('tr');
                 if (!row.classList.contains('hidden-row')) {
                     cb.checked = e.target.checked;
@@ -322,9 +424,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (selectOutdatedBtn && githubVersionInput) {
+    if (selectOutdatedBtn && versionInput) {
         selectOutdatedBtn.addEventListener('click', () => {
-            const targetVersion = githubVersionInput.value.trim();
+            const targetVersion = versionInput.value.trim();
             laptopCheckboxes.forEach(cb => {
                 const row = cb.closest('tr');
                 if (!row.classList.contains('hidden-row')) {
@@ -343,14 +445,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerUpdateBtn = document.getElementById('trigger-update-btn');
     if (triggerUpdateBtn) {
         triggerUpdateBtn.addEventListener('click', async function() {
-            const repoUrl = document.getElementById('github_repo_url')?.value;
-            const version = document.getElementById('github_version')?.value;
+            const repoUrl = repoInput ? repoInput.value.trim() : '';
+            const version = versionInput ? versionInput.value.trim() : '';
             
             const selectedCheckboxes = document.querySelectorAll('.laptop-checkbox:checked');
             const aliasesToUpdate = Array.from(selectedCheckboxes).map(cb => cb.dataset.alias);
 
             if (!repoUrl || !version) {
-                showStatusMessage('Bitte Repository-URL und Version angeben.', 'error');
+                showStatusMessage('Bitte Repository-URL und Ziel-Version (im Zahnrad-Menü) angeben.', 'error');
                 return;
             }
 

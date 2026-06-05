@@ -375,3 +375,40 @@ input[type="checkbox"] {
 .hidden-row {
     display: none !important;
 }
+
+/* Quick Filter Buttons (3-State) */
+.filter-btn-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: none;
+}
+
+.filter-btn[data-state="1"] {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #10b981;
+}
+
+.filter-btn[data-state="2"] {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+}
+
+.filter-btn:hover {
+    filter: brightness(1.2);
+    transform: translateY(-1px);
+}

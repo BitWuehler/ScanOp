@@ -25,40 +25,44 @@
             </ul>
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="icon-button" title="Einstellungen">⚙️</button>
-                <div id="settings-dropdown" class="settings-dropdown glass-container hidden">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: var(--text-main);">
+                <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
                         Übergreifender Filter
                     </label>
+                    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
+                    <label for="settings_github_repo_url" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
+                    <input type="text" id="settings_github_repo_url" value="https://github.com/Benutzer/ScanOp" style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
+                    <label for="settings_github_version" style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version (Tag/Branch):</label>
+                    <input type="text" id="settings_github_version" value="main" style="width: 100%; padding: 8px; font-size: 0.85rem;" />
                 </div>
             </div>
         </nav>
     </header>
     <main>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div>
                 <h2>Client Update über GitHub</h2>
                 <p>Lösen Sie hier ein Update der Client-Skripte aus. Die ausgewählten Clients laden die neuen Dateien herunter und starten neu.</p>
             </div>
-            <div class="filter-container" style="width: 300px;">
-                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px; border-radius: 20px; padding-left: 15px;">
+            <div class="filter-container" style="width: 300px; display: flex; flex-direction: column; align-items: flex-end;">
+                <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status, Version...)" style="padding: 10px; border-radius: 20px; padding-left: 15px; width: 100%;">
+                <div class="filter-btn-container">
+                    <button class="filter-btn" data-state="0" data-filter="online">Online</button>
+                    <button class="filter-btn" data-state="0" data-filter="aktuell">Aktuell</button>
+                </div>
             </div>
         </div>
 
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
-        <div class="glass-container form-container" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 250px;">
-                <label for="github_repo_url">GitHub Repository URL (Raw / API / oder Basis-URL):</label>
-                <input type="text" id="github_repo_url" value="https://github.com/Benutzer/ScanOp" />
-            </div>
-            <div style="flex: 1; min-width: 150px;">
-                <label for="github_version">Ziel-Version (Branch oder Tag):</label>
-                <input type="text" id="github_version" value="main" />
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 24px;">
+        <div class="glass-container form-container" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 10px;">
                 <button id="select-all-btn" class="button-secondary">Alle auswählen</button>
                 <button id="select-outdated-btn" class="button-secondary">Veraltete auswählen</button>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;">
+                <span id="display-repo-info">Repo URL und Version können oben rechts im ⚙️ Menü eingestellt werden.</span>
             </div>
         </div>
 
