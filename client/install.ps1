@@ -47,8 +47,22 @@ Write-Host ""
 # Block B: Technisches Update (falls nÃ¶tig)
 # ====================================================================
 if ($isUpdateScenario) {
-    $sourceVersionDate = (Get-Item $ClientScriptSourcePath).LastWriteTime
-    $installedVersionDate = (Get-Item $ClientScriptDestPath).LastWriteTime
+    if ($IsUnattendedUpdate) {
+        $downloadRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
+        $downloadVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
+        $clientScriptUrl = "$downloadRepoUrl/raw/$downloadVersion/client/ScanOpClient.ps1"
+        $downloadedScriptPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient_update.ps1"
+        try {
+            Invoke-WebRequest -Uri $clientScriptUrl -OutFile $downloadedScriptPath -UseBasicParsing
+            $ClientScriptSourcePath = $downloadedScriptPath
+            Write-Host "-> Neues Client-Skript heruntergeladen ($downloadVersion)." -ForegroundColor Green
+        } catch {
+            Write-Warning "Fehler beim Herunterladen des neuen Client-Skripts. Verwende lokales Fallback."
+        }
+    }
+
+    if (Test-Path $ClientScriptSourcePath) { $sourceVersionDate = (Get-Item $ClientScriptSourcePath).LastWriteTime } else { $sourceVersionDate = [datetime]::MinValue }
+    if (Test-Path $ClientScriptDestPath) { $installedVersionDate = (Get-Item $ClientScriptDestPath).LastWriteTime } else { $installedVersionDate = [datetime]::MinValue }
     
     if ($sourceVersionDate -gt $installedVersionDate -or $IsUnattendedUpdate) {
         Write-Host "Eine neuere Version des Client-Skripts ist verfÃ¼gbar oder Update wurde erzwungen!" -ForegroundColor Yellow

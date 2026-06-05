@@ -70,7 +70,7 @@ while ($true) {
 
         $AliasName = $Config.AliasName; $ServerBaseUrl = $Config.ServerBaseUrl; $ApiKey = $Config.ApiKey 
         $PollingIntervalSeconds = $Config.PollingIntervalSeconds; $InitialRetryDelaySeconds = 60; $MaxRetryDelaySeconds = 1800
-        $ClientVersion = "1.0.0"
+        $ClientVersion = if ($Config.GitHubVersion) { $Config.GitHubVersion } else { "1.0.0" }
         
         $Script:ActiveScanJob = $null; $Script:ScanInitiationTimeUTC = $null; $Script:ScanTypeForActiveJob = $null
         $Global:LastSuccessfulReportTimeUTC = $null
