@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
 
-    document.querySelectorAll('.delete-laptop-button').forEach(button => {
+    function attachDeleteListener(button) {
         button.addEventListener('click', async function() {
             const laptopAlias = this.dataset.laptopAlias;
             if (!confirm(`Wollen Sie Laptop ${laptopAlias} wirklich unwiderruflich löschen? Alle zugehörigen Berichte werden ebenfalls entfernt.`)) {
@@ -196,7 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => disableAllActionButtons(false), 1500);
             }
         });
-    });
+    }
+    document.querySelectorAll('.delete-laptop-button').forEach(attachDeleteListener);
 
     const exportPdfBtn = document.getElementById('export-pdf-btn');
     const reportTable = document.getElementById('daily-report-table');
@@ -601,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (lastKnownUpdateTime !== null && data.last_update === null) {
                 showStatusMessage('Änderungen bei Reports erkannt (möglicherweise gelöscht). Seite wird aktualisiert...', 'info');
                 if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
-                setTimeout(() => window.location.reload(), 2000);
+                refreshTableSoft();
                 return;
             }
         } catch (error) { 
@@ -610,41 +611,83 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleNextCheck();
     }
 
+    async function refreshTableSoft() {
+        try {
+            const response = await fetch(window.location.href);
+            const text = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            
+            const newRows = doc.querySelectorAll('tbody tr');
+            const currentTbody = document.querySelector('tbody');
+            if (!currentTbody) return;
+            
+            newRows.forEach(newRow => {
+                const alias = newRow.id;
+                if (!alias) return;
+                const existingRow = document.getElementById(alias);
+                
+                if (existingRow) {
+                    const existingCells = Array.from(existingRow.querySelectorAll('td'));
+                    const newCells = Array.from(newRow.querySelectorAll('td'));
+                    
+                    for (let i = 0; i < existingCells.length; i++) {
+                        // Skip checkbox cell to preserve checked state
+                        if (existingCells[i].querySelector('input[type="checkbox"]')) {
+                            const existingCb = existingCells[i].querySelector('input[type="checkbox"]');
+                            const newCb = newCells[i].querySelector('input[type="checkbox"]');
+                            if (existingCb && newCb && existingCb.dataset.version) {
+                                existingCb.dataset.version = newCb.dataset.version;
+                            }
+                            continue;
+                        }
+                        
+                        // Update innerHTML if changed
+                        if (existingCells[i].innerHTML !== newCells[i].innerHTML) {
+                            existingCells[i].innerHTML = newCells[i].innerHTML;
+                            // Reattach listeners if needed
+                            existingCells[i].querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
+                            existingCells[i].querySelectorAll('.delete-laptop-button').forEach(btn => attachDeleteListener(btn)); // assuming attachDeleteListener exists or inline it? Wait, delete listener is inline. I will just rely on it.
+                        }
+                        // Update classes
+                        if (existingCells[i].className !== newCells[i].className) {
+                            existingCells[i].className = newCells[i].className;
+                        }
+                    }
+                } else {
+                    currentTbody.appendChild(newRow);
+                    // Attach listeners to new row
+                    newRow.querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
+                }
+            });
+            
+            // Remove deleted rows
+            const existingRows = document.querySelectorAll('tbody tr');
+            existingRows.forEach(row => {
+                if (!doc.getElementById(row.id)) {
+                    row.remove();
+                }
+            });
+            
+            convertTableDateTimes();
+            if (typeof applyFilters === 'function') applyFilters();
+        } catch(e) {
+            console.error("Soft refresh failed", e);
+            window.location.reload(); // fallback
+        }
+        
+        lastKnownUpdateTime = null; // reset to fetch new timestamp next time
+        scheduleNextCheck();
+    }
+
     function scheduleNextCheck() {
         if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
         pollingTimeoutId = setTimeout(checkForUpdates, POLLING_INTERVAL);
     }
 
-    if (document.getElementById('updates-table')) {
-        setInterval(async () => {
-            try {
-                const response = await fetch('/api/v1/laptops');
-                if (!response.ok) return;
-                const laptops = await response.json();
-                laptops.forEach(laptop => {
-                    const row = document.getElementById(`laptop-row-${laptop.alias_name}`);
-                    if (row) {
-                        const versionCell = row.querySelector('.version-cell');
-                        if (versionCell) {
-                            if (laptop.pending_command === 'UPDATE_CLIENT') {
-                                if (!versionCell.innerHTML.includes('Aktualisiere')) {
-                                    versionCell.innerHTML = '<span style="display:inline-block; animation: spin 1.5s linear infinite;">🔄</span> Aktualisiere...';
-                                }
-                            } else {
-                                const v = laptop.client_version || 'N/A';
-                                if (versionCell.textContent.trim() !== v && versionCell.innerHTML.includes('Aktualisiere')) {
-                                    versionCell.textContent = v;
-                                    versionCell.style.color = '#10b981'; 
-                                    setTimeout(() => versionCell.style.color = '', 4000);
-                                } else if (!versionCell.innerHTML.includes('Aktualisiere')) {
-                                    versionCell.textContent = v;
-                                }
-                            }
-                        }
-                    }
-                });
-            } catch (err) { console.error('Polling laptops error:', err); }
-        }, 3000);
+    // Replaced specific setInterval with the global smooth refresh
+    if (document.getElementById('updates-table') || document.querySelector('table')) {
+        setInterval(refreshTableSoft, 5000);
     }
 
     if (document.querySelector('[data-sortable]') && !document.getElementById('updates-table')) {

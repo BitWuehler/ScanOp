@@ -109,18 +109,13 @@
                         <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}">
                     </td>
                     <td>
-                        {% if item.is_online %}
-                            <span style="font-size: 0.8em; margin-right: 5px;" title="Online">🟢</span>
-                        {% else %}
-                            <span style="font-size: 0.8em; margin-right: 5px;" title="Offline">🔴</span>
-                        {% endif %}
                         {{ laptop.alias_name }}
                     </td>
                     <td>{{ laptop.hostname }}</td>
                     <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
                         {{ item.scan_status.text }}
                     </td>
-                    <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></td>
+                    <td class="date-cell {{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></td>
                     <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>

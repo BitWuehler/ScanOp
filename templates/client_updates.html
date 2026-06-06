@@ -92,8 +92,8 @@
             <thead>
                 <tr>
                     <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
+                    <th data-sorted-direction="ascending">Alias</th>
                     <th>Hostname</th>
-                    <th>Alias</th>
                     <th>Online-Status</th>
                     <th>Client Version</th>
                 </tr>
@@ -106,8 +106,8 @@
                         <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}"
                             data-version="{{ laptop.client_version or '0.0.0' }}">
                     </td>
-                    <td>{{ laptop.hostname }}</td>
                     <td>{{ laptop.alias_name }}</td>
+                    <td>{{ laptop.hostname }}</td>
                     <td class="{{ item.color_class }}">{{ item.status_text }}</td>
                     <td class="version-cell">{{ laptop.client_version if laptop.client_version else 'N/A' }}</td>
                 </tr>

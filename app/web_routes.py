@@ -162,6 +162,8 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
     if redirect: return redirect
         
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    all_laptops_db = sorted(all_laptops_db, key=lambda x: (x.alias_name or "").lower())
+    
     now_utc = datetime.now(timezone.utc)
     laptops_with_status = []
     
