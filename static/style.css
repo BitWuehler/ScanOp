@@ -174,6 +174,11 @@ button:disabled {
 }
 
 /* Specific buttons */
+.scan-button, .cancel-command-button, .delete-laptop-button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
 .cancel-command-button, .delete-laptop-button {
     background: linear-gradient(135deg, #ef4444, #b91c1c);
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);

@@ -75,8 +75,7 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
         if laptop_instance.last_scan_result_message:
             msg = laptop_instance.last_scan_result_message
             if "erfolgreich abgeschlossen" in msg:
-                stype = laptop_instance.last_scan_type if laptop_instance.last_scan_type else "Scan"
-                simplified_result_message = f"{stype} OK"
+                simplified_result_message = "OK"
             else:
                 simplified_result_message = msg[:30] + ("..." if len(msg) > 30 else "")
                 
