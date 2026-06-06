@@ -199,6 +199,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.querySelectorAll('.delete-laptop-button').forEach(attachDeleteListener);
 
+    function attachUpdateClientListener(button) {
+        button.addEventListener('click', async function() {
+            const laptopAlias = this.dataset.alias;
+            const apiUrl = `/api/v1/clientcommands/trigger_update/${laptopAlias}`;
+            const targetVersion = document.getElementById('settings_github_version')?.value || 'main';
+            disableAllActionButtons(true);
+            this.disabled = true;
+            showStatusMessage(`Sende Update-Befehl für ${laptopAlias}...`, 'info');
+            try {
+                const response = await fetch(apiUrl, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_version: targetVersion })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showStatusMessage(`Erfolg: ${result.message}`, 'success');
+                    // Add shimmer immediately
+                    const row = document.getElementById(`laptop-row-${laptopAlias}`);
+                    if (row) {
+                        const vText = row.querySelector('.version-text');
+                        if (vText) vText.classList.add('shimmer-text');
+                        this.style.display = 'none';
+                    }
+                } else {
+                    showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
+                }
+            } catch (error) {
+                console.error("Update-Client Fehler:", error);
+                showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
+            } finally {
+                setTimeout(() => disableAllActionButtons(false), 1500);
+            }
+        });
+    }
+    document.querySelectorAll('.update-client-btn').forEach(attachUpdateClientListener);
+
     const exportPdfBtn = document.getElementById('export-pdf-btn');
     const reportTable = document.getElementById('daily-report-table');
 
@@ -644,10 +681,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Update innerHTML if changed
                         if (existingCells[i].innerHTML !== newCells[i].innerHTML) {
+                            const wasShimmering = existingCells[i].querySelector('.shimmer-text') !== null;
+                            const isShimmeringNow = newCells[i].querySelector('.shimmer-text') !== null;
+                            
                             existingCells[i].innerHTML = newCells[i].innerHTML;
+                            
+                            // Success animation if shimmer was removed
+                            if (wasShimmering && !isShimmeringNow) {
+                                const vText = existingCells[i].querySelector('.version-text');
+                                if (vText) {
+                                    vText.classList.add('update-success');
+                                    setTimeout(() => vText.classList.remove('update-success'), 3000);
+                                }
+                            }
+                            
                             // Reattach listeners if needed
                             existingCells[i].querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
-                            existingCells[i].querySelectorAll('.delete-laptop-button').forEach(btn => attachDeleteListener(btn)); // assuming attachDeleteListener exists or inline it? Wait, delete listener is inline. I will just rely on it.
+                            existingCells[i].querySelectorAll('.delete-laptop-button').forEach(btn => attachDeleteListener(btn));
+                            existingCells[i].querySelectorAll('.update-client-btn').forEach(btn => attachUpdateClientListener(btn));
                         }
                         // Update classes
                         if (existingCells[i].className !== newCells[i].className) {
@@ -658,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentTbody.appendChild(newRow);
                     // Attach listeners to new row
                     newRow.querySelectorAll('.cancel-command-button').forEach(attachCancelListener);
+                    newRow.querySelectorAll('.update-client-btn').forEach(attachUpdateClientListener);
                 }
             });
             
