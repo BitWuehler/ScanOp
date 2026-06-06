@@ -206,15 +206,21 @@ try {
 
 if (-NOT $clientExistsOnServer) {
     $Hostname = $env:COMPUTERNAME
+    $hostnameChanged = $false
     $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
 
     if ($ChangeHostname) {
-        $Hostname = $AliasName
+        $Hostname = $AliasName.ToUpper()
         if ($Hostname.Length -gt 15) {
             $Hostname = $Hostname.Substring($Hostname.Length - 15)
         }
         Write-Host "-> Hostname wird auf '$Hostname' geändert..." -ForegroundColor Yellow
-        try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Konnte Hostname nicht sofort ändern: $($_.Exception.Message)" }
+        try { 
+            Rename-Computer -NewName $Hostname -Force -ErrorAction Stop 
+            $hostnameChanged = $true
+        } catch { 
+            Write-Warning "Konnte Hostname nicht sofort ändern: $($_.Exception.Message)" 
+        }
     }
 
     Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
@@ -242,12 +248,17 @@ if (-NOT $clientExistsOnServer) {
         }
         
         if ($askAgain.ToLower() -ne 'n') {
-            $Hostname = $AliasName
+            $Hostname = $AliasName.ToUpper()
             if ($Hostname.Length -gt 15) {
                 $Hostname = $Hostname.Substring($Hostname.Length - 15)
             }
             Write-Host "-> Ändere System-Hostname auf: $Hostname" -ForegroundColor Yellow
-            try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Fehler beim Ändern des Hostnames: $($_.Exception.Message)" }
+            try { 
+                Rename-Computer -NewName $Hostname -Force -ErrorAction Stop 
+                $hostnameChanged = $true
+            } catch { 
+                Write-Warning "Fehler beim Ändern des Hostnames: $($_.Exception.Message)" 
+            }
             
             $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
             try {
@@ -265,7 +276,7 @@ if (-NOT $clientExistsOnServer) {
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             exit 1
         }
-}
+    }
 
 # Block E: Neuinstallation-spezifische Aktionen
 # ====================================================================
@@ -295,6 +306,15 @@ try {
     Invoke-RestMethod -Uri $clearUrl -Method Post -Headers $clearHeaders -Body $clearBody -ErrorAction SilentlyContinue | Out-Null
     Write-Host "-> Status erfolgreich an Server gemeldet." -ForegroundColor Green
 } catch {}
+
+if ($hostnameChanged -and (-not $IsUnattendedUpdate)) {
+    Write-Host ""
+    $askReboot = Read-Host "Der Hostname wurde geändert. Ein Neustart ist erforderlich. Möchten Sie den Rechner jetzt neu starten? (J/n) [Standard: J]"
+    if ($askReboot.ToLower() -ne 'n') {
+        Write-Host "Starte neu..." -ForegroundColor Yellow
+        Restart-Computer -Force
+    }
+}
 
 Write-Host ""
 Write-Host "Vorgang erfolgreich abgeschlossen." -ForegroundColor Green
