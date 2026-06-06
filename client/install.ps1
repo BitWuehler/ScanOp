@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Finales, robustes Installations- und Update-Skript fur den ScanOp Client.
 .DESCRIPTION
@@ -190,13 +190,15 @@ function Update-ClientHostname {
     $newHost = $targetAlias.ToUpper()
     if ($newHost.Length -gt 15) {
         $newHost = $newHost.Substring($newHost.Length - 15)
+        Write-Host "-> Alias ist laenger als 15 Zeichen. Neuer Hostname wird gekuerzt auf: $newHost" -ForegroundColor Yellow
     }
     
-    if ($env:COMPUTERNAME -eq $newHost) {
+    if ($env:COMPUTERNAME -ceq $newHost) {
+        Write-Host "-> Hostname ist bereits korrekt ($newHost). Keine Aenderung noetig." -ForegroundColor Green
         return $false
     }
     
-    Write-Host "-> Hostname wird auf '$newHost' geaendert..." -ForegroundColor Yellow
+    Write-Host "-> Hostname wird von '$env:COMPUTERNAME' auf '$newHost' geaendert..." -ForegroundColor Yellow
     
     $changed = $false
     $error.Clear()
