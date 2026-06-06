@@ -193,12 +193,18 @@ function Update-ClientHostname {
         Write-Host "-> Alias ist laenger als 15 Zeichen. Neuer Hostname wird gekuerzt auf: $newHost" -ForegroundColor Yellow
     }
     
-    if ($env:COMPUTERNAME -ceq $newHost) {
+    $actualHost = $env:COMPUTERNAME
+    $regHost = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "NV Hostname" -ErrorAction SilentlyContinue).'NV Hostname'
+    if ($regHost) {
+        $actualHost = $regHost
+    }
+    
+    if ($actualHost -ceq $newHost) {
         Write-Host "-> Hostname ist bereits korrekt ($newHost). Keine Aenderung noetig." -ForegroundColor Green
         return $false
     }
     
-    Write-Host "-> Hostname wird von '$env:COMPUTERNAME' auf '$newHost' geaendert..." -ForegroundColor Yellow
+    Write-Host "-> Hostname wird von '$actualHost' auf '$newHost' geaendert..." -ForegroundColor Yellow
     
     $changed = $false
     $error.Clear()
