@@ -322,3 +322,4 @@ if (-not $IsUnattendedUpdate) {
     Write-Host "Drücken Sie eine beliebige Taste zum Schließen..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
+exit 0
