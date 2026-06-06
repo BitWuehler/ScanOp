@@ -59,14 +59,16 @@ if ($isUpdateScenario) {
             Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
             $ClientScriptSourcePath = Join-Path -Path $extractPath -ChildPath "ScanOpClient.ps1"
             Write-Host "-> Release-ZIP heruntergeladen und entpackt ($downloadVersion)." -ForegroundColor Green
-        } catch {
+        }
+        catch {
             Write-Warning "Fehler beim Herunterladen der Release-ZIP. Versuche RAW-Download als Fallback..."
             $clientScriptUrl = "$downloadRepoUrl/raw/$downloadVersion/client/ScanOpClient.ps1"
             $downloadedScriptPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient_update.ps1"
             try {
                 Invoke-WebRequest -Uri $clientScriptUrl -OutFile $downloadedScriptPath -UseBasicParsing
                 $ClientScriptSourcePath = $downloadedScriptPath
-            } catch {}
+            }
+            catch {}
         }
     }
 
@@ -100,10 +102,12 @@ if ($isUpdateScenario) {
             Write-Host "4. Starte den aktualisierten Dienst..."
             Start-ScheduledTask -TaskName $taskName
             Write-Host "`nTechnisches Update erfolgreich abgeschlossen!" -ForegroundColor Green
-        } catch {
+        }
+        catch {
             Write-Error "Ein Fehler ist während des Updates aufgetreten: $($_.Exception.Message)"; Read-Host "Drücken Sie Enter."; exit
         }
-    } else {
+    }
+    else {
         Write-Host "-> Die installierte Version ist bereits aktuell." -ForegroundColor Green
     }
 }
@@ -123,7 +127,8 @@ if ($isUpdateScenario -and (Test-Path $ConfigDestPath)) {
         $ServerBaseUrl = $existingConfig.ServerBaseUrl
         $ApiKey = $existingConfig.ApiKey
         $AliasName = $existingConfig.AliasName
-    } catch { Write-Warning "Konnte bestehende Konfigurationsdatei nicht lesen." }
+    }
+    catch { Write-Warning "Konnte bestehende Konfigurationsdatei nicht lesen." }
 }
 
 # Priorität 2: Vorkonfiguration laden
@@ -133,7 +138,8 @@ if (Test-Path $PreconfigPath) {
             $preconfig = Get-Content -Path $PreconfigPath -Raw | ConvertFrom-Json
             if ([string]::IsNullOrWhiteSpace($ServerBaseUrl)) { $ServerBaseUrl = $preconfig.ServerBaseUrl }
             if ([string]::IsNullOrWhiteSpace($ApiKey)) { $ApiKey = $preconfig.ApiKey }
-        } catch { Write-Warning "Konnte vorkonfigurierte Datei nicht lesen." }
+        }
+        catch { Write-Warning "Konnte vorkonfigurierte Datei nicht lesen." }
     }
 }
 
@@ -150,17 +156,10 @@ if ($isUpdateScenario -and -not [string]::IsNullOrWhiteSpace($AliasName)) {
             $AliasName = Read-Host -Prompt "Geben Sie den neuen, eindeutigen Alias ein"
         }
     }
-} else {
+}
+else {
     if (-not $IsUnattendedUpdate) {
         $AliasName = Read-Host -Prompt "Bitte geben Sie einen eindeutigen Alias für diesen Computer ein"
-    }
-}
-
-$ChangeHostname = $false
-if (-not $IsUnattendedUpdate) {
-    $askChangeHost = Read-Host "Möchten Sie den Hostname des Rechners an den Alias anpassen? (j/N) [Standard: N]"
-    if ($askChangeHost.ToLower() -eq 'j') {
-        $ChangeHostname = $true
     }
 }
 
@@ -196,58 +195,70 @@ try {
     Invoke-RestMethod -Uri $checkUrl -Method Get -Headers $headers -ErrorAction Stop
     Write-Host "-> Client mit Alias '$AliasName' ist bereits auf dem Server registriert." -ForegroundColor Cyan
     $clientExistsOnServer = $true
-} catch {
+}
+catch {
     if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 404) {
         Write-Host "-> Client mit Alias '$AliasName' ist noch nicht auf dem Server registriert."
-    } else {
+    }
+    else {
         Write-Error "Fehler bei der Prüfung des Clients: $($_.Exception.Message)"; Read-Host "Drücken Sie Enter."; exit 1
     }
 }
 
 if (-NOT $clientExistsOnServer) {
     $Hostname = $env:COMPUTERNAME
-    $hostnameChanged = $false
-    $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
-
-    if ($ChangeHostname) {
-        $Hostname = $AliasName.ToUpper()
-        if ($Hostname.Length -gt 15) {
-            $Hostname = $Hostname.Substring($Hostname.Length - 15)
-        }
-        Write-Host "-> Hostname wird auf '$Hostname' geändert..." -ForegroundColor Yellow
-        try { 
-            Rename-Computer -NewName $Hostname -Force -ErrorAction Stop 
-            $hostnameChanged = $true
-        } catch { 
-            Write-Warning "Konnte Hostname nicht sofort ändern: $($_.Exception.Message)" 
-        }
-    }
-
     Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
-    
+    $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
     $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
+    
+    # NEU: Transparente Ausgabe
     Write-Host "-> Sende an Server ($registrationUrl):"
     Write-Host ($registrationBody | ConvertTo-Json -Depth 3) -ForegroundColor Gray
 
     try {
         Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
         Write-Host "-> Client erfolgreich beim Server registriert!" -ForegroundColor Green
-    } catch {
-        $statusCode = 0
-        $responseBody = ""
-        if ($_.Exception.Response) { 
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }
-        }
-        
-        $askAgain = 'n'
-        if (-not $IsUnattendedUpdate) {
-            Write-Warning "Registrierung fehlgeschlagen. Möglicher Grund: Hostname '$Hostname' ist bereits vergeben."
-            Write-Warning "Server meldet (HTTP $statusCode): $responseBody"
-            $askAgain = Read-Host "Soll der Hostname des Rechners auf den Alias geändert werden, um Konflikte zu vermeiden? (J/n) [Standard: J]"
-        }
-        
-        if ($askAgain.ToLower() -ne 'n') {
+    }
+    catch {
+        $errorMessage = "Fehler bei der Registrierung des Clients."; if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode; $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }; $errorMessage += " (HTTP $statusCode): $responseBody"; if ($statusCode -eq 400) { $errorMessage += "`n-> MÖGLICHE URSACHE: Der Alias existiert bereits." } } else { $errorMessage += ": $($_.Exception.Message)" }; Write-Error $errorMessage; Read-Host "Drücken Sie Enter."; exit 1
+    }
+}
+
+# Block E: Neuinstallation-spezifische Aktionen
+# ====================================================================
+if (-not $isUpdateScenario) {
+    Copy-Item -Path $ClientScriptSourcePath -Destination $ClientScriptDestPath -Force
+    $taskUser = "NT AUTHORITY\SYSTEM"
+    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ClientScriptDestPath`""
+    $taskTrigger = New-ScheduledTaskTrigger -AtStartup
+    $taskPrincipal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType ServiceAccount
+    $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5) -ExecutionTimeLimit ([TimeSpan]::Zero)
+    Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "Führt den ScanOp Client für die Server-Kommunikation im Hintergrund aus." -Force
+    Write-Host "-> Hintergrunddienst '$taskName' erfolgreich installiert."
+
+    $startChoice = Read-Host "Möchten Sie den Dienst jetzt sofort starten? (J/n) [Standard: J]"
+    if ($startChoice.ToLower() -ne 'n') {
+        Start-ScheduledTask -TaskName $taskName
+        Write-Host "-> Dienst wurde gestartet." -ForegroundColor Green
+    }
+}
+
+# Block F: Abschluss
+# ====================================================================
+try {
+    $clearUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/clientcommands/$AliasName/clear"
+    $clearHeaders = @{ "X-API-Key" = $finalConfigObject.ApiKey; "Content-Type" = "application/json" }
+    $clearBody = @{ client_version = $finalConfigObject.GitHubVersion } | ConvertTo-Json
+    Invoke-RestMethod -Uri $clearUrl -Method Post -Headers $clearHeaders -Body $clearBody -ErrorAction SilentlyContinue | Out-Null
+    Write-Host "-> Status erfolgreich an Server gemeldet." -ForegroundColor Green
+}
+catch {}
+
+Write-Host ""
+Write-Host "Vorgang erfolgreich abgeschlossen." -ForegroundColor Green
+if (-not $IsUnattendedUpdate) {
+    Read-Host "Drücken Sie Enter zum Schließen."
+}
             $Hostname = $AliasName.ToUpper()
             if ($Hostname.Length -gt 15) {
                 $Hostname = $Hostname.Substring($Hostname.Length - 15)
@@ -277,7 +288,7 @@ if (-NOT $clientExistsOnServer) {
             exit 1
         }
     }
-
+}
 # Block E: Neuinstallation-spezifische Aktionen
 # ====================================================================
 if (-not $isUpdateScenario) {
