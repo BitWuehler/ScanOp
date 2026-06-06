@@ -61,10 +61,13 @@
 
         <div class="glass-container form-container actions-bar"
             style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
-            <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Globale Aktionen:</h3>
-            <button class="scan-button" data-laptop-alias="all" data-scan-type="QuickScan">QuickScan für ALLE</button>
-            <button class="scan-button" data-laptop-alias="all" data-scan-type="FullScan">FullScan für ALLE</button>
-            <button class="cancel-command-button" data-laptop-alias="all">Alle Befehle abbrechen</button>
+            <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Stapelverarbeitung:</h3>
+            <div style="display: flex; gap: 10px;">
+                <button id="select-all-btn" class="button-secondary">Alle auswählen</button>
+                <button id="trigger-quickscan-btn" class="button-secondary">QuickScan für Markierte</button>
+                <button id="trigger-fullscan-btn" class="button-secondary">FullScan für Markierte</button>
+                <button class="cancel-command-button button-secondary" data-laptop-alias="all">Alle Befehle abbrechen</button>
+            </div>
         </div>
 
         <div class="filter-bar"
@@ -85,10 +88,10 @@
         <table data-sortable>
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
+                    <th data-sorted-direction="ascending">Alias</th>
                     <th>Hostname</th>
-                    <th>Alias</th>
-                    <th data-sorted-direction="descending">Scan Status</th>
+                    <th>Scan Status</th>
                     <th>Zuletzt gesehen (Lokal)</th>
                     <th>Letzter Scan (Lokal)</th>
                     <th>Scan Typ</th>
@@ -102,9 +105,18 @@
                 {% for item in laptops_list %}
                 {% set laptop = item.db_data %}
                 <tr id="laptop-row-{{ laptop.alias_name }}">
-                    <td>{{ laptop.id }}</td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}">
+                    </td>
+                    <td>
+                        {% if item.is_online %}
+                            <span style="font-size: 0.8em; margin-right: 5px;" title="Online">🟢</span>
+                        {% else %}
+                            <span style="font-size: 0.8em; margin-right: 5px;" title="Offline">🔴</span>
+                        {% endif %}
+                        {{ laptop.alias_name }}
+                    </td>
                     <td>{{ laptop.hostname }}</td>
-                    <td>{{ laptop.alias_name }}</td>
                     <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
                         {{ item.scan_status.text }}
                     </td>
@@ -112,12 +124,7 @@
                     <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
-                        {% if laptop.last_scan_result_message %}
-                        <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:50] }}{%
-                            if laptop.last_scan_result_message|length > 50 %}...{% endif %}</span>
-                        {% else %}
-                        N/A
-                        {% endif %}
+                        <span title="{{ laptop.last_scan_result_message if laptop.last_scan_result_message else '' }}">{{ item.simplified_result_message }}</span>
                     </td>
                     <td>
                         {% if laptop.last_scan_threats_found is not none %}

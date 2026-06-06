@@ -88,7 +88,7 @@
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
-        <table id="updates-table">
+        <table id="updates-table" data-sortable>
             <thead>
                 <tr>
                     <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
@@ -127,6 +127,7 @@
         <p>© 2026 ScanOp - Jonas Thiebes</p>
     </footer>
 
+    <script src="/assets/sortable.min.js?v=3"></script>
     <script src="/assets/app.js?v=4"></script>
 </body>
 

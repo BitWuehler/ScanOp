@@ -521,6 +521,57 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function setupBulkScanButton(btnId, scanType) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+
+        btn.addEventListener('click', async function() {
+            const selectedCheckboxes = document.querySelectorAll('.laptop-checkbox:checked');
+            const aliasesToUpdate = Array.from(selectedCheckboxes).map(cb => cb.dataset.alias);
+
+            if (aliasesToUpdate.length === 0) {
+                showStatusMessage('Bitte mindestens einen Client auswählen.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            showStatusMessage(`Sende ${scanType}-Befehl für ${aliasesToUpdate.length} Laptop(s)...`, 'info');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const targetLaptop of aliasesToUpdate) {
+                const apiUrl = `/api/v1/clientcommands/trigger_scan/${targetLaptop}`;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ scan_type: scanType })
+                    });
+                    if (response.ok) {
+                        successCount++;
+                        updatePendingCommandInUI(targetLaptop, "START_SCAN", scanType);
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount === 0) {
+                showStatusMessage(`Erfolg: ${scanType}-Befehl für ${successCount} Laptop(s) gesendet!`, 'success');
+            } else {
+                showStatusMessage(`${successCount} erfolgreich, ${errorCount} fehlerhaft.`, 'warning');
+            }
+            
+            setTimeout(() => { btn.disabled = false; }, 2000);
+        });
+    }
+
+    setupBulkScanButton('trigger-quickscan-btn', 'QuickScan');
+    setupBulkScanButton('trigger-fullscan-btn', 'FullScan');
+
     convertTableDateTimes();
 
     // Auto-Refresh Polling

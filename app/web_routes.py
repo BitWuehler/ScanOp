@@ -47,9 +47,17 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
     if redirect: return redirect
         
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    all_laptops_db = sorted(all_laptops_db, key=lambda x: (x.alias_name or "").lower())
+    
     laptops_with_status = []
     now_utc = datetime.now(timezone.utc)
     for laptop_instance in all_laptops_db:
+        is_online = False
+        if laptop_instance.last_api_contact:
+            contact_aware = laptop_instance.last_api_contact.replace(tzinfo=timezone.utc)
+            if (now_utc - contact_aware) <= timedelta(minutes=5):
+                is_online = True
+                
         status_info = {"text": "Unbekannt", "color_class": "status-unknown"} 
         if laptop_instance.last_scan_time is not None:
             last_scan_time_aware = laptop_instance.last_scan_time.replace(tzinfo=timezone.utc)
@@ -57,12 +65,27 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             if laptop_instance.last_scan_threats_found is True:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
             elif time_since_last_scan <= timedelta(hours=5):
-                status_info = {"text": "OK (aktuell)", "color_class": "status-green"}
+                status_info = {"text": "OK (<5h)", "color_class": "status-green"}
             else: 
-                status_info = {"text": "OK (älter als 5h)", "color_class": "status-yellow"}
+                status_info = {"text": "OK (>5h)", "color_class": "status-yellow"}
         else:
             status_info = {"text": "Kein Scan bisher", "color_class": "status-white"}
-        laptops_with_status.append({"db_data": laptop_instance, "scan_status": status_info})
+            
+        simplified_result_message = "N/A"
+        if laptop_instance.last_scan_result_message:
+            msg = laptop_instance.last_scan_result_message
+            if "erfolgreich abgeschlossen" in msg:
+                stype = laptop_instance.last_scan_type if laptop_instance.last_scan_type else "Scan"
+                simplified_result_message = f"{stype} OK"
+            else:
+                simplified_result_message = msg[:30] + ("..." if len(msg) > 30 else "")
+                
+        laptops_with_status.append({
+            "db_data": laptop_instance, 
+            "scan_status": status_info,
+            "is_online": is_online,
+            "simplified_result_message": simplified_result_message
+        })
     return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht", "user": user})
 
 @router.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
@@ -149,10 +172,19 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
         
         if laptop.last_api_contact:
             contact_aware = laptop.last_api_contact.replace(tzinfo=timezone.utc)
-            if (now_utc - contact_aware) <= timedelta(minutes=5):
+            delta = now_utc - contact_aware
+            if delta <= timedelta(minutes=5):
                 is_online = True
                 status_text = "Online"
                 color_class = "status-green"
+            else:
+                mins = int(delta.total_seconds() / 60)
+                if mins < 60:
+                    status_text = f"Offline ({mins}m)"
+                elif mins < 1440:
+                    status_text = f"Offline ({mins//60}h)"
+                else:
+                    status_text = f"Offline ({mins//1440}d)"
                 
         laptops_with_status.append({
             "db_data": laptop,
