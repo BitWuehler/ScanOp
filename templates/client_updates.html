@@ -32,9 +32,13 @@
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">Menü ▾</button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
-                    <a href="{{ url_for('web_daily_report') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄 Tagesbericht öffnen</a>
+                    <a href="{{ url_for('web_daily_report') }}"
+                        style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄
+                        Tagesbericht öffnen</a>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">⚙️ Einstellungen</h3>
+                    <h3
+                        style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        ⚙️ Einstellungen</h3>
                     <label
                         style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
@@ -114,9 +118,16 @@
                     <td class="{{ item.color_class }}">{{ item.status_text }}</td>
                     <td class="version-cell" style="padding-right: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="version-text {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-text{% endif %}" style="flex-grow: 1;">{{ laptop.client_version if laptop.client_version else 'N/A' }}</span>
-                            <button class="update-client-btn icon-button-small" data-alias="{{ laptop.alias_name }}" title="Sofort updaten" {% if laptop.pending_command == 'UPDATE_CLIENT' %}style="display:none;"{% endif %}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <span
+                                class="version-text {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-text{% endif %}"
+                                style="flex-grow: 1;">{{ laptop.client_version if laptop.client_version else 'N/A'
+                                }}</span>
+                            <button class="update-client-btn scan-button" data-alias="{{ laptop.alias_name }}" title="Sofort updaten" {% if laptop.pending_command == 'UPDATE_CLIENT' %}style="display:none;"{% endif %} style="display: inline-flex; align-items: center; justify-content: center;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
                             </button>
                         </div>
                     </td>

@@ -486,11 +486,12 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 }
 
 .icon-button-small {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--glass-border);
     color: var(--text-muted);
-    border-radius: 6px;
-    padding: 4px;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
