@@ -313,20 +313,25 @@ footer {
     display: inline-block;
 }
 
-.icon-button {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
+.nav-dropdown-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
-    padding: 5px;
-    transition: transform 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
     box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.icon-button:hover {
-    transform: rotate(45deg);
-    background: transparent;
-    box-shadow: none;
+.nav-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
 }
 
 .settings-dropdown {
