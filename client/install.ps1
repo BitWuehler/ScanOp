@@ -208,32 +208,23 @@ if (-NOT $clientExistsOnServer) {
     $Hostname = $env:COMPUTERNAME
     $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
 
-    function Get-TruncatedAlias {
-        $name = $AliasName
-        if ($name.Length -gt 15) {
-            $name = $name.Substring($name.Length - 15)
-        }
-        return $name
-    }
-
     if ($ChangeHostname) {
-        $Hostname = Get-TruncatedAlias
+        $Hostname = $AliasName
+        if ($Hostname.Length -gt 15) {
+            $Hostname = $Hostname.Substring($Hostname.Length - 15)
+        }
         Write-Host "-> Hostname wird auf '$Hostname' geändert..." -ForegroundColor Yellow
         try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Konnte Hostname nicht sofort ändern: $($_.Exception.Message)" }
     }
 
     Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
     
-    function Register-ClientWithHostname {
-        param([string]$HName)
-        $registrationBody = @{ hostname = $HName; alias_name = $AliasName } | ConvertTo-Json
-        Write-Host "-> Sende an Server ($registrationUrl):"
-        Write-Host ($registrationBody | ConvertTo-Json -Depth 3) -ForegroundColor Gray
-        Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
-    }
+    $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
+    Write-Host "-> Sende an Server ($registrationUrl):"
+    Write-Host ($registrationBody | ConvertTo-Json -Depth 3) -ForegroundColor Gray
 
     try {
-        Register-ClientWithHostname -HName $Hostname
+        Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
         Write-Host "-> Client erfolgreich beim Server registriert!" -ForegroundColor Green
     } catch {
         $statusCode = 0
@@ -251,12 +242,16 @@ if (-NOT $clientExistsOnServer) {
         }
         
         if ($askAgain.ToLower() -ne 'n') {
-            $Hostname = Get-TruncatedAlias
+            $Hostname = $AliasName
+            if ($Hostname.Length -gt 15) {
+                $Hostname = $Hostname.Substring($Hostname.Length - 15)
+            }
             Write-Host "-> Ändere System-Hostname auf: $Hostname" -ForegroundColor Yellow
             try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Fehler beim Ändern des Hostnames: $($_.Exception.Message)" }
             
+            $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
             try {
-                Register-ClientWithHostname -HName $Hostname
+                Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
                 Write-Host "-> Client erfolgreich mit neuem Hostname beim Server registriert!" -ForegroundColor Green
             } catch {
                 Write-Error "Fehler bei der erneuten Registrierung des Clients: $($_.Exception.Message)"
@@ -270,7 +265,6 @@ if (-NOT $clientExistsOnServer) {
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             exit 1
         }
-    }
 }
 
 # Block E: Neuinstallation-spezifische Aktionen
