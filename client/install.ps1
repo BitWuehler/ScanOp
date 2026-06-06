@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Finales, robustes Installations- und Update-Skript für den ScanOp Client.
 .DESCRIPTION
@@ -156,6 +156,14 @@ if ($isUpdateScenario -and -not [string]::IsNullOrWhiteSpace($AliasName)) {
     }
 }
 
+$ChangeHostname = $false
+if (-not $IsUnattendedUpdate) {
+    $askChangeHost = Read-Host "Möchten Sie den Hostname des Rechners an den Alias anpassen? (j/N) [Standard: N]"
+    if ($askChangeHost.ToLower() -eq 'j') {
+        $ChangeHostname = $true
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($AliasName) -or [string]::IsNullOrWhiteSpace($ServerBaseUrl) -or [string]::IsNullOrWhiteSpace($ApiKey)) {
     Write-Error "Alle Konfigurationsfelder sind erforderlich. Abbruch."; Read-Host "Drücken Sie Enter."; exit 1
 }
@@ -198,19 +206,70 @@ try {
 
 if (-NOT $clientExistsOnServer) {
     $Hostname = $env:COMPUTERNAME
-    Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
     $registrationUrl = "$($finalConfigObject.ServerBaseUrl)/api/v1/laptops"
-    $registrationBody = @{ hostname = $Hostname; alias_name = $AliasName } | ConvertTo-Json
+
+    function Get-TruncatedAlias {
+        $name = $AliasName
+        if ($name.Length -gt 15) {
+            $name = $name.Substring($name.Length - 15)
+        }
+        return $name
+    }
+
+    if ($ChangeHostname) {
+        $Hostname = Get-TruncatedAlias
+        Write-Host "-> Hostname wird auf '$Hostname' geändert..." -ForegroundColor Yellow
+        try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Konnte Hostname nicht sofort ändern: $($_.Exception.Message)" }
+    }
+
+    Write-Host "Registriere neuen Client '$AliasName' (Hostname: $Hostname)..."
     
-    # NEU: Transparente Ausgabe
-    Write-Host "-> Sende an Server ($registrationUrl):"
-    Write-Host ($registrationBody | ConvertTo-Json -Depth 3) -ForegroundColor Gray
+    function Register-ClientWithHostname {
+        param([string]$HName)
+        $registrationBody = @{ hostname = $HName; alias_name = $AliasName } | ConvertTo-Json
+        Write-Host "-> Sende an Server ($registrationUrl):"
+        Write-Host ($registrationBody | ConvertTo-Json -Depth 3) -ForegroundColor Gray
+        Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
+    }
 
     try {
-        Invoke-RestMethod -Uri $registrationUrl -Method Post -Headers $headers -Body $registrationBody -ContentType "application/json" -ErrorAction Stop
+        Register-ClientWithHostname -HName $Hostname
         Write-Host "-> Client erfolgreich beim Server registriert!" -ForegroundColor Green
     } catch {
-        $errorMessage = "Fehler bei der Registrierung des Clients."; if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode; $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }; $errorMessage += " (HTTP $statusCode): $responseBody"; if ($statusCode -eq 400) { $errorMessage += "`n-> MÖGLICHE URSACHE: Der Alias existiert bereits." } } else { $errorMessage += ": $($_.Exception.Message)" }; Write-Error $errorMessage; Read-Host "Drücken Sie Enter."; exit 1
+        $statusCode = 0
+        $responseBody = ""
+        if ($_.Exception.Response) { 
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            $responseBody = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }
+        }
+        
+        $askAgain = 'n'
+        if (-not $IsUnattendedUpdate) {
+            Write-Warning "Registrierung fehlgeschlagen. Möglicher Grund: Hostname '$Hostname' ist bereits vergeben."
+            Write-Warning "Server meldet (HTTP $statusCode): $responseBody"
+            $askAgain = Read-Host "Soll der Hostname des Rechners auf den Alias geändert werden, um Konflikte zu vermeiden? (J/n) [Standard: J]"
+        }
+        
+        if ($askAgain.ToLower() -ne 'n') {
+            $Hostname = Get-TruncatedAlias
+            Write-Host "-> Ändere System-Hostname auf: $Hostname" -ForegroundColor Yellow
+            try { Rename-Computer -NewName $Hostname -Force -ErrorAction Stop } catch { Write-Warning "Fehler beim Ändern des Hostnames: $($_.Exception.Message)" }
+            
+            try {
+                Register-ClientWithHostname -HName $Hostname
+                Write-Host "-> Client erfolgreich mit neuem Hostname beim Server registriert!" -ForegroundColor Green
+            } catch {
+                Write-Error "Fehler bei der erneuten Registrierung des Clients: $($_.Exception.Message)"
+                Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
+                $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                exit 1
+            }
+        } else {
+            Write-Error "Registrierung abgebrochen."
+            Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            exit 1
+        }
     }
 }
 
@@ -246,5 +305,6 @@ try {
 Write-Host ""
 Write-Host "Vorgang erfolgreich abgeschlossen." -ForegroundColor Green
 if (-not $IsUnattendedUpdate) {
-    Read-Host "Drücken Sie Enter zum Schließen."
+    Write-Host "Drücken Sie eine beliebige Taste zum Schließen..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
