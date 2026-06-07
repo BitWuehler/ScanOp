@@ -203,7 +203,8 @@ while ($true) {
                                             
                                             Write-Log -Message "Update-Ziel: Repo=$repoUrl, Version=$version"
                                             
-                                            $installerUrl = "$repoUrl/raw/$version/client/install.ps1"
+                                            $dlVersion = if ($version -eq "latest") { "main" } else { $version }
+                                            $installerUrl = "$repoUrl/raw/$dlVersion/client/install.ps1"
                                             $installerPath = Join-Path -Path $ScriptDir -ChildPath "install_update.ps1"
                                             
                                             Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing

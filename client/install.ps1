@@ -90,7 +90,11 @@ if ($isUpdateScenario) {
     if ($IsUnattendedUpdate -or (-not [string]::IsNullOrWhiteSpace($Version))) {
         $downloadRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
         $downloadVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
-        $zipUrl = "$downloadRepoUrl/releases/download/$downloadVersion/ScanOp-Client.zip"
+        if ($downloadVersion -eq "latest") {
+            $zipUrl = "$downloadRepoUrl/releases/latest/download/ScanOp-Client.zip"
+        } else {
+            $zipUrl = "$downloadRepoUrl/releases/download/$downloadVersion/ScanOp-Client.zip"
+        }
         $zipPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOp-Client.zip"
         $extractPath = Join-Path -Path $InstallerBaseDir -ChildPath "extracted_update"
         try {
@@ -102,7 +106,8 @@ if ($isUpdateScenario) {
         }
         catch {
             Write-Warning "Fehler beim Herunterladen der Release-ZIP. Versuche RAW-Download als Fallback..."
-            $clientScriptUrl = "$downloadRepoUrl/raw/$downloadVersion/client/ScanOpClient.ps1"
+            $rawDlVersion = if ($downloadVersion -eq "latest") { "main" } else { $downloadVersion }
+            $clientScriptUrl = "$downloadRepoUrl/raw/$rawDlVersion/client/ScanOpClient.ps1"
             $downloadedScriptPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient_update.ps1"
             try {
                 Invoke-WebRequest -Uri $clientScriptUrl -OutFile $downloadedScriptPath -UseBasicParsing
@@ -213,7 +218,7 @@ if (-not (Test-Path $InstallDir)) {
 
 # Standard-Werte fur Repo, falls leer
 $finalRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl }
-$finalVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
+$finalVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } elseif ($Version -eq "latest") { "latest" } else { $Version }
 
 # Konfiguration in Datei speichern
 $finalConfigObject = [PSCustomObject]@{ AliasName = $AliasName; ServerBaseUrl = $ServerBaseUrl.TrimEnd('/'); ApiKey = $ApiKey; GitHubRepoUrl = $finalRepoUrl; GitHubVersion = $finalVersion; PollingIntervalSeconds = 60; InterimCheckIntervalMinutes = 30 }

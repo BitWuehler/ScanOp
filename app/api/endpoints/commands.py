@@ -129,7 +129,7 @@ def trigger_update_for_client(
                     payload.version = release_data.get("tag_name", "main")
             except Exception as e:
                 print(f"WARNUNG: Konnte 'latest' Release nicht auflösen: {e}")
-                payload.version = "main" # Fallback
+                payload.version = "latest" # Fallback to latest, let the client handle it
         elif v_stripped.lower() != "main" and v_stripped and v_stripped[0].isdigit():
             payload.version = f"v{v_stripped}"
         else:
