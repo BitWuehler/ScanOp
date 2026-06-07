@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let latestGithubVersion = null;
 
-    async function resolveLatestVersionSilently() {
+    async function resolveLatestVersionSilently(forceRefresh = false) {
         const versionInput = document.getElementById('settings_github_version');
         if (!versionInput) return;
         
@@ -17,14 +17,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (repoPath.endsWith('/')) repoPath = repoPath.slice(0, -1);
             
             if (repoPath) {
-                try {
-                    const response = await fetch(`https://api.github.com/repos/${repoPath}/releases/latest`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        latestGithubVersion = data.tag_name || 'main';
+                const cacheKey = `scanop_latest_tag_${repoPath}`;
+                const timeKey = `scanop_latest_time_${repoPath}`;
+                const cachedTag = localStorage.getItem(cacheKey);
+                const cachedTime = localStorage.getItem(timeKey);
+                
+                if (!forceRefresh && cachedTag && cachedTime && (Date.now() - parseInt(cachedTime)) < 600000) {
+                    latestGithubVersion = cachedTag;
+                } else {
+                    try {
+                        const response = await fetch(`https://api.github.com/repos/${repoPath}/releases/latest`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            latestGithubVersion = data.tag_name || 'main';
+                            localStorage.setItem(cacheKey, latestGithubVersion);
+                            localStorage.setItem(timeKey, Date.now().toString());
+                        } else if (cachedTag) {
+                            latestGithubVersion = cachedTag; // Fallback to stale cache
+                        }
+                    } catch (err) {
+                        console.error("Silent GitHub version fetch failed:", err);
+                        if (cachedTag) latestGithubVersion = cachedTag;
                     }
-                } catch (err) {
-                    console.error("Silent GitHub version fetch failed:", err);
                 }
             }
         } else {
@@ -363,6 +377,30 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('scanop_version', e.target.value);
             resolveLatestVersionSilently(); // Re-resolve if changed
         });
+
+        // Add refresh button dynamically next to the version input
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '5px';
+        versionInput.parentNode.insertBefore(wrapper, versionInput);
+        wrapper.appendChild(versionInput);
+        
+        const refreshBtn = document.createElement('button');
+        refreshBtn.type = 'button';
+        refreshBtn.innerHTML = '&#x21bb;';
+        refreshBtn.title = 'Version jetzt abrufen (Cache ignorieren)';
+        refreshBtn.style.cssText = 'padding: 8px 12px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: white; border-radius: 4px; cursor: pointer;';
+        
+        refreshBtn.onclick = () => {
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = '0.5';
+            resolveLatestVersionSilently(true).then(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = '1';
+                showStatusMessage(`Erfolgreich abgerufen: ${latestGithubVersion || 'Unbekannt'}`, 'success');
+            });
+        };
+        wrapper.appendChild(refreshBtn);
     }
 
     // Lade initial die Version
