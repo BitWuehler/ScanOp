@@ -200,8 +200,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.delete-laptop-button').forEach(attachDeleteListener);
 
     function attachUpdateClientListener(button) {
-        button.addEventListener('click', async function() {
-            const laptopAlias = this.dataset.alias;
+        button.addEventListener('click', async function(event) {
+            let laptopAlias = this.dataset.alias || this.getAttribute('data-alias');
+            if (!laptopAlias) {
+                const tr = this.closest('tr');
+                if (tr && tr.id && tr.id.startsWith('laptop-row-')) {
+                    laptopAlias = tr.id.replace('laptop-row-', '');
+                }
+            }
+            if (!laptopAlias) {
+                console.error("Could not find alias for update button", this);
+                showStatusMessage("Interner Fehler: Alias fehlt am Button", "error");
+                return;
+            }
             const apiUrl = `/api/v1/clientcommands/trigger_update/${encodeURIComponent(laptopAlias)}`;
             const targetVersion = document.getElementById('settings_github_version')?.value || 'main';
             const repoUrl = document.getElementById('settings_github_repo')?.value || 'https://github.com/BitWuehler/ScanOp';
