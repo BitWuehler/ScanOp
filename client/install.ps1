@@ -69,10 +69,20 @@ if (-not $IsUnattendedUpdate -and -not $SkipInstallerUpdateCheck) {
             Write-Host "Es ist ein neuerer Installer ($latestVersionStr) verfuegbar! (Aktuell: $CurrentInstallerVersion)" -ForegroundColor Cyan
             $doUpdate = Read-Host "Moechten Sie das Skript auf die neueste Version aktualisieren und neu starten? (J/n) [Standard: J]"
             if ($doUpdate.ToLower() -ne 'n') {
-                Write-Host "Lade Update herunter..." -ForegroundColor Yellow
-                $installerUrl = "$repoUrlForUpdate/raw/$latestVersionStr/client/install.ps1"
-                $newInstallerPath = Join-Path -Path $InstallerBaseDir -ChildPath "install_update.ps1"
-                Invoke-WebRequest -Uri $installerUrl -OutFile $newInstallerPath -UseBasicParsing
+                Write-Host "Lade Update-ZIP herunter..." -ForegroundColor Yellow
+                $zipUrl = "$repoUrlForUpdate/releases/download/$latestVersionStr/ScanOp-Client.zip"
+                $zipPath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOp-Installer-Update.zip"
+                $extractPath = Join-Path -Path $InstallerBaseDir -ChildPath "installer_update_extracted"
+                
+                Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
+                if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force }
+                Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+                
+                $newInstallerPath = Join-Path -Path $extractPath -ChildPath "install.ps1"
+                if (-not (Test-Path $newInstallerPath)) {
+                    Write-Host "Fehler: install.ps1 nicht in der ZIP gefunden!" -ForegroundColor Red
+                    exit 1
+                }
                 
                 Write-Host "Starte neuen Installer..." -ForegroundColor Green
                 $startArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$newInstallerPath`" -RepoUrl `"$repoUrlForUpdate`" -Version `"$latestVersionStr`" -SkipInstallerUpdateCheck"

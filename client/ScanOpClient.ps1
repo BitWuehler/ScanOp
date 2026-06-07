@@ -204,10 +204,24 @@ while ($true) {
                                             Write-Log -Message "Update-Ziel: Repo=$repoUrl, Version=$version"
                                             
                                             $dlVersion = if ($version -eq "latest") { "main" } else { $version }
-                                            $installerUrl = "$repoUrl/raw/$dlVersion/client/install.ps1"
-                                            $installerPath = Join-Path -Path $ScriptDir -ChildPath "install_update.ps1"
                                             
-                                            Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+                                            if ($dlVersion -eq "main") {
+                                                $installerUrl = "$repoUrl/raw/main/client/install.ps1"
+                                                $installerPath = Join-Path -Path $ScriptDir -ChildPath "install_update.ps1"
+                                                Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+                                            } else {
+                                                $zipUrl = "$repoUrl/releases/download/$dlVersion/ScanOp-Client.zip"
+                                                if ($version -eq "latest") {
+                                                    $zipUrl = "$repoUrl/releases/latest/download/ScanOp-Client.zip"
+                                                }
+                                                $zipPath = Join-Path -Path $ScriptDir -ChildPath "ScanOp-Installer-Update.zip"
+                                                $extractPath = Join-Path -Path $ScriptDir -ChildPath "installer_update_extracted"
+                                                Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
+                                                if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force }
+                                                Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+                                                $installerPath = Join-Path -Path $extractPath -ChildPath "install.ps1"
+                                                if (-not (Test-Path $installerPath)) { throw "install.ps1 nicht in der ZIP gefunden!" }
+                                            }
                                             
                                             Write-Log -Message "Installer heruntergeladen. Starte Update-Prozess im Hintergrund und beende mich."
                                             
