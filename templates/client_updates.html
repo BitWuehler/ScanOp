@@ -116,10 +116,10 @@
                     <td>{{ laptop.alias_name }}</td>
                     <td>{{ laptop.hostname }}</td>
                     <td class="{{ item.color_class }}">{{ item.status_text }}</td>
-                    <td class="version-cell" style="padding-right: 5px;">
+                    <td class="version-cell {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-cell{% endif %}" style="padding-right: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span
-                                class="version-text {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-text{% endif %}"
+                                class="version-text"
                                 style="flex-grow: 1;">{{ laptop.client_version if laptop.client_version else 'N/A'
                                 }}</span>
                             <button class="update-client-btn scan-button" data-alias="{{ laptop.alias_name }}" title="Sofort updaten" {% if laptop.pending_command == 'UPDATE_CLIENT' %}style="display:none;"{% endif %} style="display: inline-flex; align-items: center; justify-content: center;">

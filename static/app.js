@@ -2,6 +2,54 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const statusMessageDiv = document.getElementById('status-message');
+    
+    let latestGithubVersion = null;
+
+    async function resolveLatestVersionSilently() {
+        const versionInput = document.getElementById('settings_github_version');
+        if (!versionInput) return;
+        
+        let targetVersion = versionInput.value.trim();
+        if (targetVersion.toLowerCase() === 'latest') {
+            const repoInput = document.getElementById('settings_github_repo_url');
+            const repoUrl = repoInput ? repoInput.value.trim() : 'https://github.com/BitWuehler/ScanOp';
+            let repoPath = repoUrl.replace('https://github.com/', '').replace('http://github.com/', '');
+            if (repoPath.endsWith('/')) repoPath = repoPath.slice(0, -1);
+            
+            if (repoPath) {
+                try {
+                    const response = await fetch(`https://api.github.com/repos/${repoPath}/releases/latest`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        latestGithubVersion = data.tag_name || 'main';
+                    }
+                } catch (err) {
+                    console.error("Silent GitHub version fetch failed:", err);
+                }
+            }
+        } else {
+            latestGithubVersion = targetVersion;
+        }
+        updateButtonVisibilityBasedOnVersion();
+    }
+
+    function updateButtonVisibilityBasedOnVersion() {
+        if (!latestGithubVersion) return;
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const cb = row.querySelector('.laptop-checkbox');
+            const updateBtn = row.querySelector('.update-client-btn');
+            if (cb && updateBtn) {
+                const clientVersion = cb.dataset.version;
+                if (clientVersion === latestGithubVersion) {
+                    updateBtn.style.display = 'none';
+                } else if (!row.querySelector('.shimmer-cell')) {
+                    updateBtn.style.display = 'inline-flex';
+                }
+            }
+        });
+    }
+
+    resolveLatestVersionSilently();
 
     // --- Hilfsfunktionen ---
     function showStatusMessage(message, type = 'info') {
@@ -228,8 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Add shimmer immediately
                     const row = document.getElementById(`laptop-row-${laptopAlias}`);
                     if (row) {
-                        const vText = row.querySelector('.version-text');
-                        if (vText) vText.classList.add('shimmer-text');
+                        const vCell = row.querySelector('.version-cell');
+                        if (vCell) vCell.classList.add('shimmer-cell');
                         this.style.display = 'none';
                     }
                 } else {
@@ -576,8 +624,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         successCount++;
                         const row = document.getElementById(`laptop-row-${targetLaptop}`);
                         if (row) {
-                            const vText = row.querySelector('.version-text');
-                            if (vText) vText.classList.add('shimmer-text');
+                            const vCell = row.querySelector('.version-cell');
+                            if (vCell) vCell.classList.add('shimmer-cell');
                             const updateBtn = row.querySelector('.update-client-btn');
                             if (updateBtn) updateBtn.style.display = 'none';
                         }
@@ -719,8 +767,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Update innerHTML if changed
                         if (existingCells[i].innerHTML !== newCells[i].innerHTML) {
-                            const wasShimmering = existingCells[i].querySelector('.shimmer-text') !== null;
-                            const isShimmeringNow = newCells[i].querySelector('.shimmer-text') !== null;
+                            const wasShimmering = existingCells[i].classList.contains('shimmer-cell');
+                            const isShimmeringNow = newCells[i].classList.contains('shimmer-cell');
                             
                             existingCells[i].innerHTML = newCells[i].innerHTML;
                             
@@ -760,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             convertTableDateTimes();
+            updateButtonVisibilityBasedOnVersion();
             if (typeof applyFilters === 'function') applyFilters();
         } catch(e) {
             console.error("Soft refresh failed", e);

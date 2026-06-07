@@ -468,6 +468,12 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     font-weight: bold;
 }
 
+.shimmer-cell {
+    background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.15) 50%, transparent 100%);
+    background-size: 200% auto;
+    animation: shimmer 2s linear infinite;
+}
+
 @keyframes shimmer {
     to {
         background-position: 200% center;
