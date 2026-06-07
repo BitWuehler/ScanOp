@@ -176,7 +176,7 @@ if ($isUpdateScenario) {
 Write-Host "`n--- Konfigurations-Management ---" -ForegroundColor Cyan
 
 # Variablen initialisieren
-$ServerBaseUrl = ""; $ApiKey = ""; $AliasName = ""
+$ServerBaseUrl = ""; $ApiKey = ""; $AliasName = ""; $ExistingGitHubRepoUrl = ""; $ExistingPolling = $null; $ExistingInterim = $null
 
 # Prioritaet 1: Lade bestehende Konfiguration
 if ($isUpdateScenario -and (Test-Path $ConfigDestPath)) {
@@ -186,20 +186,24 @@ if ($isUpdateScenario -and (Test-Path $ConfigDestPath)) {
         $ServerBaseUrl = $existingConfig.ServerBaseUrl
         $ApiKey = $existingConfig.ApiKey
         $AliasName = $existingConfig.AliasName
+        if ($null -ne $existingConfig.GitHubRepoUrl) { $ExistingGitHubRepoUrl = $existingConfig.GitHubRepoUrl }
+        if ($null -ne $existingConfig.PollingIntervalSeconds) { $ExistingPolling = $existingConfig.PollingIntervalSeconds }
+        if ($null -ne $existingConfig.InterimCheckIntervalMinutes) { $ExistingInterim = $existingConfig.InterimCheckIntervalMinutes }
     }
     catch { Write-Warning "Konnte bestehende Konfigurationsdatei nicht lesen." }
 }
 
 # Prioritaet 2: Vorkonfiguration laden
 if (Test-Path $PreconfigPath) {
-    if ([string]::IsNullOrWhiteSpace($ServerBaseUrl) -or [string]::IsNullOrWhiteSpace($ApiKey)) {
-        try {
-            $preconfig = Get-Content -Path $PreconfigPath -Raw | ConvertFrom-Json
-            if ([string]::IsNullOrWhiteSpace($ServerBaseUrl)) { $ServerBaseUrl = $preconfig.ServerBaseUrl }
-            if ([string]::IsNullOrWhiteSpace($ApiKey)) { $ApiKey = $preconfig.ApiKey }
-        }
-        catch { Write-Warning "Konnte vorkonfigurierte Datei nicht lesen." }
+    try {
+        $preconfig = Get-Content -Path $PreconfigPath -Raw | ConvertFrom-Json
+        if ([string]::IsNullOrWhiteSpace($ServerBaseUrl) -and $null -ne $preconfig.ServerBaseUrl) { $ServerBaseUrl = $preconfig.ServerBaseUrl }
+        if ([string]::IsNullOrWhiteSpace($ApiKey) -and $null -ne $preconfig.ApiKey) { $ApiKey = $preconfig.ApiKey }
+        if ([string]::IsNullOrWhiteSpace($ExistingGitHubRepoUrl) -and $null -ne $preconfig.GitHubRepoUrl) { $ExistingGitHubRepoUrl = $preconfig.GitHubRepoUrl }
+        if ($null -eq $ExistingPolling -and $null -ne $preconfig.PollingIntervalSeconds) { $ExistingPolling = $preconfig.PollingIntervalSeconds }
+        if ($null -eq $ExistingInterim -and $null -ne $preconfig.InterimCheckIntervalMinutes) { $ExistingInterim = $preconfig.InterimCheckIntervalMinutes }
     }
+    catch { Write-Warning "Konnte vorkonfigurierte Datei nicht lesen." }
 }
 
 # Prioritaet 3: Interaktive Abfrage
@@ -232,11 +236,14 @@ if (-not (Test-Path $InstallDir)) {
 }
 
 # Standard-Werte fur Repo, falls leer
-$finalRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl }
+$finalRepoUrl = if (-not [string]::IsNullOrWhiteSpace($RepoUrl)) { $RepoUrl } elseif (-not [string]::IsNullOrWhiteSpace($ExistingGitHubRepoUrl)) { $ExistingGitHubRepoUrl } else { "https://github.com/BitWuehler/ScanOp" }
 $finalVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } elseif ($Version -eq "latest") { "latest" } else { $Version }
 
+$finalPolling = if ($null -ne $ExistingPolling) { $ExistingPolling } else { 60 }
+$finalInterim = if ($null -ne $ExistingInterim) { $ExistingInterim } else { 30 }
+
 # Konfiguration in Datei speichern
-$finalConfigObject = [PSCustomObject]@{ AliasName = $AliasName; ServerBaseUrl = $ServerBaseUrl.TrimEnd('/'); ApiKey = $ApiKey; GitHubRepoUrl = $finalRepoUrl; GitHubVersion = $finalVersion; PollingIntervalSeconds = 60; InterimCheckIntervalMinutes = 30 }
+$finalConfigObject = [PSCustomObject]@{ AliasName = $AliasName; ServerBaseUrl = $ServerBaseUrl.TrimEnd('/'); ApiKey = $ApiKey; GitHubRepoUrl = $finalRepoUrl; GitHubVersion = $finalVersion; PollingIntervalSeconds = $finalPolling; InterimCheckIntervalMinutes = $finalInterim }
 $finalConfigObject | ConvertTo-Json -Depth 3 | Set-Content -Path $ConfigDestPath -Encoding UTF8 -Force
 Write-Host "-> Konfiguration wurde lokal gespeichert." -ForegroundColor Green
 
