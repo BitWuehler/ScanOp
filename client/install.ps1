@@ -16,7 +16,9 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$IsUnattendedUpdate,
     [Parameter(Mandatory=$false)]
-    [switch]$SkipInstallerUpdateCheck
+    [switch]$SkipInstallerUpdateCheck,
+    [Parameter(Mandatory=$false)]
+    [string]$PreconfigOverridePath
 )
 
 # Block A: Preamble und Umgebungseinstellungen
@@ -35,7 +37,11 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $InstallerBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $InstallDir = "C:\Program Files\ScanOpClient"
 $ClientScriptSourcePath = Join-Path -Path $InstallerBaseDir -ChildPath "ScanOpClient.ps1"
-$PreconfigPath = Join-Path -Path $InstallerBaseDir -ChildPath "client_config.json"
+if (-not [string]::IsNullOrWhiteSpace($PreconfigOverridePath) -and (Test-Path $PreconfigOverridePath)) {
+    $PreconfigPath = $PreconfigOverridePath
+} else {
+    $PreconfigPath = Join-Path -Path $InstallerBaseDir -ChildPath "client_config.json"
+}
 $ClientScriptDestPath = Join-Path -Path $InstallDir -ChildPath "ScanOpClient.ps1"
 $ConfigDestPath = Join-Path -Path $InstallDir -ChildPath "client_config.json"
 $taskName = "ScanOpClientService"
@@ -86,6 +92,9 @@ if (-not $IsUnattendedUpdate -and -not $SkipInstallerUpdateCheck) {
                 
                 Write-Host "Starte neuen Installer..." -ForegroundColor Green
                 $startArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$newInstallerPath`" -RepoUrl `"$repoUrlForUpdate`" -Version `"$latestVersionStr`" -SkipInstallerUpdateCheck"
+                if (Test-Path $PreconfigPath) {
+                    $startArgs += " -PreconfigOverridePath `"$PreconfigPath`""
+                }
                 Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs
                 exit 0
             }
