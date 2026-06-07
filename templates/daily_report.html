@@ -92,7 +92,7 @@
         </div>
 
         {% if laptops_report_data %}
-        <table id="daily-report-table" class="daily-report-table">
+        <table id="daily-report-table" class="daily-report-table sortable" data-sortable>
             <thead>
                 <tr>
                     <th>Alias</th>
@@ -105,7 +105,7 @@
             <tbody>
                 {% for item in laptops_report_data %}
                 {% set laptop = item.db_data %}
-                <tr class="laptop-report-row">
+                <tr id="{{ laptop.alias_name }}" class="laptop-report-row">
                     <td>{{ laptop.alias_name }}</td>
                     <td>{{ laptop.hostname }}</td>
                     <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
@@ -134,6 +134,7 @@
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="/assets/sortable.min.js?v=3"></script>
     <script src="/assets/app.js?v=3"></script>
 </body>
 

@@ -136,6 +136,7 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
         target_date = date.today()
         report_title = f"Tagesbericht für {target_date.strftime('%d.%m.%Y')}"
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    all_laptops_db = sorted(all_laptops_db, key=lambda x: (x.alias_name or "").lower())
     report_data = []
     now_utc = datetime.now(timezone.utc)
     for laptop in all_laptops_db:
