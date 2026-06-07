@@ -21,7 +21,7 @@ body {
     margin: 0;
     min-height: 100vh;
     background-color: var(--bg-color);
-    background-image: 
+    background-image:
         radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
@@ -88,16 +88,25 @@ main {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-h2, h3 {
+h2,
+h3 {
     font-weight: 600;
     margin-top: 0;
 }
 
-.glass-container, .login-container {
+.glass-container,
+.login-container {
     background: var(--glass-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -121,7 +130,8 @@ table {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-th, td {
+th,
+td {
     padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid var(--glass-border);
@@ -145,7 +155,8 @@ tr:hover {
 }
 
 /* Buttons */
-button, .button-link {
+button,
+.button-link {
     padding: 10px 20px;
     background: var(--accent-gradient);
     color: white;
@@ -159,7 +170,8 @@ button, .button-link {
     box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
 }
 
-button:hover, .button-link:hover {
+button:hover,
+.button-link:hover {
     background: var(--accent-hover);
     transform: translateY(-1px);
     box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.4);
@@ -174,23 +186,29 @@ button:disabled {
 }
 
 /* Specific buttons */
-.scan-button, .cancel-command-button, .delete-laptop-button {
+.scan-button,
+.cancel-command-button,
+.delete-laptop-button {
     padding: 6px 10px;
     font-size: 0.85rem;
 }
 
-.cancel-command-button, .delete-laptop-button {
+.cancel-command-button,
+.delete-laptop-button {
     background: linear-gradient(135deg, #ef4444, #b91c1c);
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 }
 
-.cancel-command-button:hover, .delete-laptop-button:hover {
+.cancel-command-button:hover,
+.delete-laptop-button:hover {
     background: linear-gradient(135deg, #dc2626, #991b1b);
     box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.4);
 }
 
 /* Form inputs */
-input[type="text"], input[type="password"], select {
+input[type="text"],
+input[type="password"],
+select {
     width: 100%;
     padding: 12px;
     background: rgba(0, 0, 0, 0.2);
@@ -202,7 +220,9 @@ input[type="text"], input[type="password"], select {
     font-family: inherit;
 }
 
-input[type="text"]:focus, input[type="password"]:focus, select:focus {
+input[type="text"]:focus,
+input[type="password"]:focus,
+select:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
@@ -249,13 +269,15 @@ body.login-page {
 }
 
 /* Status Colors */
-.status-success, .status-green {
+.status-success,
+.status-green {
     background-color: var(--success-bg) !important;
     color: var(--success-text) !important;
     font-weight: 500;
 }
 
-.status-error, .status-red {
+.status-error,
+.status-red {
     background-color: var(--error-bg) !important;
     color: var(--error-text) !important;
     font-weight: 500;
@@ -273,7 +295,8 @@ body.login-page {
     font-weight: 500;
 }
 
-.status-white, .status-unknown {
+.status-white,
+.status-unknown {
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: var(--text-muted) !important;
 }
@@ -306,6 +329,7 @@ footer {
         transform: scale(1);
         box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
     }
+
     100% {
         transform: scale(1.05);
         box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
@@ -347,7 +371,7 @@ footer {
     min-width: 200px;
     z-index: 1000;
     padding: 15px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     border: 1px solid var(--glass-border);
     transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
     opacity: 1;
@@ -429,7 +453,8 @@ input[type="checkbox"] {
 th[data-sortable] {
     cursor: pointer;
     position: relative;
-    padding-right: 25px; /* Platz für Pfeile */
+    padding-right: 25px;
+    /* Platz für Pfeile */
 }
 
 th[data-sortable]::after {
@@ -443,18 +468,25 @@ th[data-sortable]::after {
 }
 
 th[data-sorted="true"][data-sorted-direction="ascending"]::after {
-    content: " \25B2"; /* Triangle up */
+    content: " \25B2";
+    /* Triangle up */
     color: rgba(255, 255, 255, 0.8);
 }
 
 th[data-sorted="true"][data-sorted-direction="descending"]::after {
-    content: " \25BC"; /* Triangle down */
+    content: " \25BC";
+    /* Triangle down */
     color: rgba(255, 255, 255, 0.8);
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Update Animations */
@@ -471,13 +503,14 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 .shimmer-cell {
     background: linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.4) 50%, transparent 100%);
     background-size: 200% auto;
-    animation: shimmer-cell-anim 2s linear infinite;
+    animation: shimmer-cell-anim 5s linear infinite;
 }
 
 @keyframes shimmer-cell-anim {
     0% {
         background-position: 200% center;
     }
+
     100% {
         background-position: -200% center;
     }
@@ -494,10 +527,27 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 }
 
 @keyframes flashSuccess {
-    0% { color: var(--success-text); text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
-    10% { color: #fff; text-shadow: 0 0 15px rgba(255, 255, 255, 1); transform: scale(1.05); }
-    30% { color: var(--success-text); text-shadow: 0 0 5px rgba(16, 185, 129, 0.5); transform: scale(1); }
-    100% { color: inherit; text-shadow: none; }
+    0% {
+        color: var(--success-text);
+        text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    }
+
+    10% {
+        color: #fff;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 1);
+        transform: scale(1.05);
+    }
+
+    30% {
+        color: var(--success-text);
+        text-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+        transform: scale(1);
+    }
+
+    100% {
+        color: inherit;
+        text-shadow: none;
+    }
 }
 
 .icon-button-small {
