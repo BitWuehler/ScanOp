@@ -159,7 +159,7 @@ def trigger_update_for_client(
             payload=payload_json
         )
         if not updated_laptop:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop nicht gefunden.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Laptop '{laptop_identifier_or_all}' nicht gefunden.")
         return {"message": f"Update-Befehl für Laptop '{laptop_identifier_or_all}' gesetzt."}
 
 
