@@ -233,11 +233,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.style.display = 'none';
                     }
                 } else {
-                    showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
+                    showStatusMessage(`Fehler (${response.status}) bei ${apiUrl}: ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
                 console.error("Update-Client Fehler:", error);
-                showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
+                showStatusMessage(`Netzwerkfehler bei ${apiUrl}: ${error.message}`, 'error');
             }
         });
     }
