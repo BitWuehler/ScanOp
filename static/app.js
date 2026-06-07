@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', async function() {
             const laptopAlias = this.dataset.laptopAlias;
             const scanType = this.dataset.scanType;
-            const apiUrl = `/api/v1/clientcommands/trigger_scan/${laptopAlias}`;
+            const apiUrl = `/api/v1/clientcommands/trigger_scan/${encodeURIComponent(laptopAlias)}`;
             disableAllActionButtons(true);
             showStatusMessage(`Sende Befehl: ${scanType} für ${laptopAlias === 'all' ? 'ALLE Laptops' : laptopAlias}...`, 'info');
             try {
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm(`Wollen Sie Laptop ${laptopAlias} wirklich unwiderruflich löschen? Alle zugehörigen Berichte werden ebenfalls entfernt.`)) {
                 return;
             }
-            const apiUrl = `/api/v1/laptops/${laptopAlias}`;
+            const apiUrl = `/api/v1/laptops/${encodeURIComponent(laptopAlias)}`;
             disableAllActionButtons(true);
             showStatusMessage(`Lösche Laptop ${laptopAlias}...`, 'info');
             try {
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachUpdateClientListener(button) {
         button.addEventListener('click', async function() {
             const laptopAlias = this.dataset.alias;
-            const apiUrl = `/api/v1/clientcommands/trigger_update/${laptopAlias}`;
+            const apiUrl = `/api/v1/clientcommands/trigger_update/${encodeURIComponent(laptopAlias)}`;
             const targetVersion = document.getElementById('settings_github_version')?.value || 'main';
             const repoUrl = document.getElementById('settings_github_repo')?.value || 'https://github.com/BitWuehler/ScanOp';
             this.disabled = true;
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let errorCount = 0;
 
             for (const targetLaptop of aliasesToUpdate) {
-                const apiUrl = `/api/v1/clientcommands/trigger_update/${targetLaptop}`;
+                const apiUrl = `/api/v1/clientcommands/trigger_update/${encodeURIComponent(targetLaptop)}`;
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -574,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let errorCount = 0;
 
             for (const targetLaptop of aliasesToUpdate) {
-                const apiUrl = `/api/v1/clientcommands/trigger_scan/${targetLaptop}`;
+                const apiUrl = `/api/v1/clientcommands/trigger_scan/${encodeURIComponent(targetLaptop)}`;
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',

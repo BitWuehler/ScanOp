@@ -87,7 +87,7 @@ if (-not $IsUnattendedUpdate) {
 # Block B: Technisches Update (falls noetig)
 # ====================================================================
 if ($isUpdateScenario) {
-    if ($IsUnattendedUpdate) {
+    if ($IsUnattendedUpdate -or (-not [string]::IsNullOrWhiteSpace($Version))) {
         $downloadRepoUrl = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
         $downloadVersion = if ([string]::IsNullOrWhiteSpace($Version)) { "main" } else { $Version }
         $zipUrl = "$downloadRepoUrl/releases/download/$downloadVersion/ScanOp-Client.zip"
@@ -115,7 +115,7 @@ if ($isUpdateScenario) {
     if (Test-Path $ClientScriptSourcePath) { $sourceVersionDate = (Get-Item $ClientScriptSourcePath).LastWriteTime } else { $sourceVersionDate = [datetime]::MinValue }
     if (Test-Path $ClientScriptDestPath) { $installedVersionDate = (Get-Item $ClientScriptDestPath).LastWriteTime } else { $installedVersionDate = [datetime]::MinValue }
     
-    if ($sourceVersionDate -gt $installedVersionDate -or $IsUnattendedUpdate) {
+    if ($sourceVersionDate -gt $installedVersionDate -or $IsUnattendedUpdate -or (-not [string]::IsNullOrWhiteSpace($Version))) {
         Write-Host "Eine neuere Version des Client-Skripts ist verfuegbar oder Update wurde erzwungen!" -ForegroundColor Yellow
         if (-not $IsUnattendedUpdate) {
             $choice = Read-Host "Moechten Sie das technische Update jetzt durchfuehren? (J/n) [Standard: J]"
