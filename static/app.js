@@ -491,12 +491,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (selectOutdatedBtn && versionInput) {
-        selectOutdatedBtn.addEventListener('click', () => {
-            const targetVersion = versionInput.value.trim();
+        selectOutdatedBtn.addEventListener('click', async () => {
+            let targetVersion = versionInput.value.trim();
+            
+            if (targetVersion.toLowerCase() === 'latest') {
+                const repoInput = document.getElementById('settings_github_repo_url');
+                const repoUrl = repoInput ? repoInput.value.trim() : 'https://github.com/BitWuehler/ScanOp';
+                let repoPath = repoUrl.replace('https://github.com/', '').replace('http://github.com/', '');
+                if (repoPath.endsWith('/')) repoPath = repoPath.slice(0, -1);
+                
+                if (repoPath) {
+                    try {
+                        selectOutdatedBtn.disabled = true;
+                        showStatusMessage('Ermittle neueste Version von GitHub...', 'info');
+                        const response = await fetch(`https://api.github.com/repos/${repoPath}/releases/latest`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            targetVersion = data.tag_name || 'main';
+                            showStatusMessage(`Neueste Version erkannt: ${targetVersion}`, 'success');
+                        } else {
+                            showStatusMessage('Fehler beim Abrufen der Version von GitHub.', 'error');
+                            selectOutdatedBtn.disabled = false;
+                            return;
+                        }
+                    } catch (err) {
+                        showStatusMessage('Netzwerkfehler beim Abrufen der GitHub Version.', 'error');
+                        selectOutdatedBtn.disabled = false;
+                        return;
+                    } finally {
+                        selectOutdatedBtn.disabled = false;
+                    }
+                }
+            }
+
             laptopCheckboxes.forEach(cb => {
                 const row = cb.closest('tr');
                 if (!row.classList.contains('hidden-row')) {
                     const clientVersion = cb.dataset.version;
+                    // compare clientVersion to targetVersion
                     if (clientVersion !== targetVersion) {
                         cb.checked = true;
                     } else {
