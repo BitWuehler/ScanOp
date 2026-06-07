@@ -109,7 +109,7 @@ while ($true) {
 
                 if ($Script:ActiveScanJob.State -eq 'Running' -and (-not $isTimedOut)) {
                     try {
-                        $completionEvent = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 10 -ErrorAction SilentlyContinue | Where-Object { ($_.Id -in (1001, 1002, 1005)) -and ($_.TimeCreated.ToUniversalTime() -gt $Script:ScanInitiationTimeUTC) } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+                        $completionEvent = Get-WinEvent -FilterHashtable @{ProviderName="Microsoft-Windows-Windows Defender"; ID=1001,1002,1005; StartTime=$Script:ScanInitiationTimeUTC.ToLocalTime()} -MaxEvents 1 -ErrorAction SilentlyContinue
                     }
                     catch { Write-Log -Level WARN -Message "Fehler bei proaktiver Event-Suche: $($_.Exception.Message)" }
                 }
@@ -129,7 +129,7 @@ while ($true) {
                     if ($Script:ActiveScanJob.State -ne 'Completed' -or ($scanJobResult -is [System.Management.Automation.ErrorRecord])) { $reportThreatsFound = $true; [void]$reportResultMessageAggregator.AppendLine("Scan-Job meldete Fehler."); [void]$reportThreatDetailsAggregator.AppendLine("Job-Fehler: $($scanJobResult | Out-String)") }
 
                     $finalScanEvent = $completionEvent
-                    if (-not $finalScanEvent) { $finalScanEvent = Get-WinEvent -ProviderName "Microsoft-Windows-Windows Defender" -MaxEvents 20 | Where-Object { ($_.Id -in (1001, 1002, 1005)) -and ($_.TimeCreated.ToUniversalTime() -ge $Script:ScanInitiationTimeUTC) } | Sort-Object TimeCreated -Descending | Select-Object -First 1 }
+                    if (-not $finalScanEvent) { $finalScanEvent = Get-WinEvent -FilterHashtable @{ProviderName="Microsoft-Windows-Windows Defender"; ID=1001,1002,1005; StartTime=$Script:ScanInitiationTimeUTC.ToLocalTime()} -MaxEvents 1 -ErrorAction SilentlyContinue }
 
                     if ($finalScanEvent) {
                         $interpreted = ConvertFrom-DefenderEvent -Event $finalScanEvent
