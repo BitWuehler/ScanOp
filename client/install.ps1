@@ -54,7 +54,8 @@ Write-Host "======================================" -ForegroundColor Green
 Write-Host "Dieses Skript installiert oder aktualisiert den ScanOp-Dienst."
 Write-Host ""
 
-$CurrentInstallerVersion = "1.4.6"
+# WICHTIG: Diese Version muss vor jedem GitHub-Release manuell erhoeht werden!
+$CurrentInstallerVersion = "1.4.15"
 
 if (-not $IsUnattendedUpdate -and -not $SkipInstallerUpdateCheck) {
     Write-Host "Pruefe auf Updates fuer den Installer..." -ForegroundColor Yellow
