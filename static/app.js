@@ -204,18 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const laptopAlias = this.dataset.alias;
             const apiUrl = `/api/v1/clientcommands/trigger_update/${laptopAlias}`;
             const targetVersion = document.getElementById('settings_github_version')?.value || 'main';
-            disableAllActionButtons(true);
+            const repoUrl = document.getElementById('settings_github_repo')?.value || 'https://github.com/BitWuehler/ScanOp';
             this.disabled = true;
-            showStatusMessage(`Sende Update-Befehl für ${laptopAlias}...`, 'info');
             try {
                 const response = await fetch(apiUrl, { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target_version: targetVersion })
+                    body: JSON.stringify({ repo_url: repoUrl, version: targetVersion })
                 });
                 const result = await response.json();
                 if (response.ok) {
-                    showStatusMessage(`Erfolg: ${result.message}`, 'success');
                     // Add shimmer immediately
                     const row = document.getElementById(`laptop-row-${laptopAlias}`);
                     if (row) {
@@ -229,8 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Update-Client Fehler:", error);
                 showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
-            } finally {
-                setTimeout(() => disableAllActionButtons(false), 1500);
             }
         });
     }
@@ -521,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             triggerUpdateBtn.disabled = true;
-            showStatusMessage(`Sende Update-Befehl für ${aliasesToUpdate.length} Laptop(s)...`, 'info');
 
             let successCount = 0;
             let errorCount = 0;
@@ -538,8 +533,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         successCount++;
                         const row = document.getElementById(`laptop-row-${targetLaptop}`);
                         if (row) {
-                            const versionCell = row.querySelector('.version-cell');
-                            if (versionCell) versionCell.innerHTML = '<span style="display:inline-block; animation: spin 1.5s linear infinite;">🔄</span> Aktualisiere...';
+                            const vText = row.querySelector('.version-text');
+                            if (vText) vText.classList.add('shimmer-text');
+                            const updateBtn = row.querySelector('.update-client-btn');
+                            if (updateBtn) updateBtn.style.display = 'none';
                         }
                     } else {
                         errorCount++;
@@ -549,10 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (errorCount === 0) {
-                showStatusMessage(`Erfolg: Update-Befehl für ${successCount} Laptop(s) gesendet!`, 'success');
-            } else {
-                showStatusMessage(`${successCount} erfolgreich, ${errorCount} fehlerhaft.`, 'warning');
+            if (errorCount !== 0) {
+                showStatusMessage(`${errorCount} Updates konnten nicht gesendet werden.`, 'warning');
             }
             
             setTimeout(() => { triggerUpdateBtn.disabled = false; }, 2000);
