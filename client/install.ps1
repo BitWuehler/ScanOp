@@ -9,9 +9,14 @@
 #>
 
 param(
+    [Parameter(Mandatory=$false)]
     [string]$RepoUrl = "",
+    [Parameter(Mandatory=$false)]
     [string]$Version = "",
-    [switch]$IsUnattendedUpdate
+    [Parameter(Mandatory=$false)]
+    [switch]$IsUnattendedUpdate,
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipInstallerUpdateCheck
 )
 
 # Block A: Preamble und Umgebungseinstellungen
@@ -45,7 +50,7 @@ Write-Host ""
 
 $CurrentInstallerVersion = "1.4.6"
 
-if (-not $IsUnattendedUpdate) {
+if (-not $IsUnattendedUpdate -and -not $SkipInstallerUpdateCheck) {
     Write-Host "Pruefe auf Updates fuer den Installer..." -ForegroundColor Yellow
     $repoUrlForUpdate = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
     $repoPath = $repoUrlForUpdate.Replace("https://github.com/","").Replace("http://github.com/","")
@@ -70,7 +75,7 @@ if (-not $IsUnattendedUpdate) {
                 Invoke-WebRequest -Uri $installerUrl -OutFile $newInstallerPath -UseBasicParsing
                 
                 Write-Host "Starte neuen Installer..." -ForegroundColor Green
-                $startArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$newInstallerPath`" -RepoUrl `"$repoUrlForUpdate`" -Version `"$latestVersionStr`""
+                $startArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$newInstallerPath`" -RepoUrl `"$repoUrlForUpdate`" -Version `"$latestVersionStr`" -SkipInstallerUpdateCheck"
                 Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs
                 exit 0
             }
