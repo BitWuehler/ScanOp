@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners für Buttons ---
-    document.querySelectorAll('.scan-button').forEach(button => {
+    document.querySelectorAll('.scan-button[data-scan-type]').forEach(button => {
         button.addEventListener('click', async function() {
             const laptopAlias = this.dataset.laptopAlias;
             const scanType = this.dataset.scanType;
