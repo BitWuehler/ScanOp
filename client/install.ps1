@@ -43,6 +43,46 @@ Write-Host "======================================" -ForegroundColor Green
 Write-Host "Dieses Skript installiert oder aktualisiert den ScanOp-Dienst."
 Write-Host ""
 
+$CurrentInstallerVersion = "1.4.6"
+
+if (-not $IsUnattendedUpdate) {
+    Write-Host "Pruefe auf Updates fuer den Installer..." -ForegroundColor Yellow
+    $repoUrlForUpdate = if ([string]::IsNullOrWhiteSpace($RepoUrl)) { "https://github.com/BitWuehler/ScanOp" } else { $RepoUrl.TrimEnd('/') }
+    $repoPath = $repoUrlForUpdate.Replace("https://github.com/","").Replace("http://github.com/","")
+    try {
+        $latestReleaseUrl = "https://api.github.com/repos/$repoPath/releases/latest"
+        $latestRelease = Invoke-RestMethod -Uri $latestReleaseUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+        $latestVersionStr = $latestRelease.tag_name
+        
+        $cleanLatest = $latestVersionStr -replace '^v',''
+        $cleanCurrent = $CurrentInstallerVersion -replace '^v',''
+        
+        $latestVer = [version]$cleanLatest
+        $currentVer = [version]$cleanCurrent
+        
+        if ($latestVer -gt $currentVer) {
+            Write-Host "Es ist ein neuerer Installer ($latestVersionStr) verfuegbar! (Aktuell: $CurrentInstallerVersion)" -ForegroundColor Cyan
+            $doUpdate = Read-Host "Moechten Sie das Skript auf die neueste Version aktualisieren und neu starten? (J/n) [Standard: J]"
+            if ($doUpdate.ToLower() -ne 'n') {
+                Write-Host "Lade Update herunter..." -ForegroundColor Yellow
+                $installerUrl = "$repoUrlForUpdate/raw/$latestVersionStr/client/install.ps1"
+                $newInstallerPath = Join-Path -Path $InstallerBaseDir -ChildPath "install_update.ps1"
+                Invoke-WebRequest -Uri $installerUrl -OutFile $newInstallerPath -UseBasicParsing
+                
+                Write-Host "Starte neuen Installer..." -ForegroundColor Green
+                $startArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$newInstallerPath`" -RepoUrl `"$repoUrlForUpdate`" -Version `"$latestVersionStr`""
+                Start-Process -FilePath "powershell.exe" -ArgumentList $startArgs
+                exit 0
+            }
+        } else {
+            Write-Host "-> Installer ist auf dem neuesten Stand ($CurrentInstallerVersion)." -ForegroundColor Green
+        }
+    } catch {
+        Write-Warning "Konnte nicht auf Updates fuer den Installer pruefen: $($_.Exception.Message)"
+    }
+    Write-Host ""
+}
+
 
 # Block B: Technisches Update (falls noetig)
 # ====================================================================
