@@ -404,6 +404,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // Checkbox-Spalte (erste Zelle jeder Zeile + Header) für PDF-Export ausblenden
+            const checkboxCellsToHide = reportTable.querySelectorAll('th:first-child, td:first-child');
+            checkboxCellsToHide.forEach(el => el.style.display = 'none');
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: "landscape" });
             let reportTitle = document.querySelector('main h2')?.textContent || "ScanOp Tagesbericht";
@@ -435,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.save(`scanop_tagesbericht_${reportDateStr.replace(/[\.\s:]/g, '-')}.pdf`);
 
             // Versteckte Zeilen wieder einblenden und Nummern löschen
+            checkboxCellsToHide.forEach(el => el.style.display = '');
             rows.forEach(row => {
                 const indexCell = row.querySelector('.index-cell');
                 if (indexCell) indexCell.innerText = '';
