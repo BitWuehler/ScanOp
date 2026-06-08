@@ -20,16 +20,24 @@
                 <img src="/assets/scanop_icon.png" alt="ScanOp Logo"
                     style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
             </div>
-            <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
+            <h1 class="hide-on-mobile" style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
         </div>
         <nav style="display: flex; align-items: center; gap: 20px;">
-            <ul>
+            <ul class="hide-on-mobile">
                 <li><a href="{{ url_for('web_laptops_overview') }}">Übersicht</a></li>
                 <li><a href="{{ url_for('web_client_updates') }}">Updates</a></li>
             </ul>
             <div class="settings-menu-container">
-                <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">Menü ▾</button>
+                <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">
+                    <span class="menu-text">Menü ▾</span>
+                    <span class="menu-icon show-on-mobile" style="display:none;">☰</span>
+                </button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
+                    <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
+                        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📊 Übersicht</a>
+                        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🔄 Updates</a>
+                        <hr style="border-color: rgba(255,255,255,0.1); margin-top: 15px;">
+                    </div>
                     <a href="{{ url_for('web_daily_report') }}"
                         style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄
                         Tagesbericht öffnen</a>
@@ -95,12 +103,13 @@
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
+        <div class="table-responsive">
         <table id="updates-table" data-sortable>
             <thead>
                 <tr>
                     <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
                     <th data-sorted-direction="ascending">Alias</th>
-                    <th>Hostname</th>
+                    <th class="hide-on-mobile">Hostname</th>
                     <th>Online-Status</th>
                     <th style="width: 140px;">Client Version</th>
                 </tr>
@@ -114,7 +123,7 @@
                             data-version="{{ laptop.client_version or '0.0.0' }}">
                     </td>
                     <td>{{ laptop.alias_name }}</td>
-                    <td>{{ laptop.hostname }}</td>
+                    <td class="hide-on-mobile">{{ laptop.hostname }}</td>
                     <td class="{{ item.color_class }}">{{ item.status_text }}</td>
                     <td class="version-cell {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-cell{% endif %}" style="padding-right: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -135,6 +144,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% else %}
         <p>Keine Laptops gefunden.</p>
         {% endif %}

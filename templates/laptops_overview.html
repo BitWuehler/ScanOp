@@ -21,16 +21,24 @@
                 <img src="/assets/scanop_icon.png" alt="ScanOp Logo"
                     style="height: 36px; width: 36px; object-fit: cover; border-radius: 50%;">
             </div>
-            <h1 style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
+            <h1 class="hide-on-mobile" style="margin: 0; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ScanOp - {{ title }}</h1>
         </div>
         <nav style="display: flex; align-items: center; gap: 20px;">
-            <ul>
+            <ul class="hide-on-mobile">
                 <li><a href="{{ url_for('web_laptops_overview') }}">Übersicht</a></li>
                 <li><a href="{{ url_for('web_client_updates') }}">Updates</a></li>
             </ul>
             <div class="settings-menu-container">
-                <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">Menü ▾</button>
+                <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">
+                    <span class="menu-text">Menü ▾</span>
+                    <span class="menu-icon show-on-mobile" style="display:none;">☰</span>
+                </button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
+                    <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
+                        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📊 Übersicht</a>
+                        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🔄 Updates</a>
+                        <hr style="border-color: rgba(255,255,255,0.1); margin-top: 15px;">
+                    </div>
                     <a href="{{ url_for('web_daily_report') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄 Tagesbericht öffnen</a>
                     <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🚪 Logout ({{ user }})</a>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
@@ -87,19 +95,20 @@
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
+        <div class="table-responsive">
         <table data-sortable>
             <thead>
                 <tr>
                     <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
                     <th data-sorted-direction="ascending">Alias</th>
-                    <th>Hostname</th>
+                    <th class="hide-on-mobile">Hostname</th>
                     <th>Scan Status</th>
-                    <th>Zuletzt gesehen (Lokal)</th>
-                    <th>Letzter Scan (Lokal)</th>
-                    <th>Scan Typ</th>
+                    <th class="hide-on-mobile">Zuletzt gesehen (Lokal)</th>
+                    <th class="hide-on-mobile">Letzter Scan (Lokal)</th>
+                    <th class="hide-on-mobile">Scan Typ</th>
                     <th>Scan Ergebnis</th>
-                    <th>Bedrohungen?</th>
-                    <th>Akt. Befehl</th>
+                    <th class="hide-on-mobile">Bedrohungen?</th>
+                    <th class="hide-on-mobile">Akt. Befehl</th>
                     <th>Aktionen</th>
                 </tr>
             </thead>
@@ -113,20 +122,20 @@
                     <td>
                         {{ laptop.alias_name }}
                     </td>
-                    <td>{{ laptop.hostname }}</td>
+                    <td class="hide-on-mobile">{{ laptop.hostname }}</td>
                     <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
                         {{ item.scan_status.text }}
                     </td>
-                    <td class="{{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}">
+                    <td class="hide-on-mobile {{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}">
                         <span class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></span>
                     </td>
-                    <td>
+                    <td class="hide-on-mobile">
                         <span class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></span>
                         {% if laptop.last_scan_duration_minutes is not none %}
                         <span class="scan-duration"> ({{ laptop.last_scan_duration_minutes }} min)</span>
                         {% endif %}
                     </td>
-                    <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
+                    <td class="hide-on-mobile">{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
                         {% if laptop.last_scan_threats_found is true %}
                         <span style="color:#ff4444; font-weight:bold;">Fund!</span>
@@ -134,7 +143,7 @@
                         <span title="{{ laptop.last_scan_result_message if laptop.last_scan_result_message else '' }}">{{ item.simplified_result_message }}</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="hide-on-mobile">
                         {% if laptop.last_scan_threats_found is true %}
                         <span style="color:#ff4444; font-weight:bold;">siehe Bericht</span>
                         {% elif laptop.last_scan_threats_found is not none %}
@@ -143,7 +152,7 @@
                         N/A
                         {% endif %}
                     </td>
-                    <td class="pending-command-cell" style="white-space: nowrap;">
+                    <td class="hide-on-mobile pending-command-cell" style="white-space: nowrap;">
                         {% if laptop.pending_command == "Scan" and laptop.pending_scan_type %}
                         {{ laptop.pending_scan_type }}
                         {% else %}
@@ -166,6 +175,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% else %}
         <p>Keine Laptops registriert.</p>
         {% endif %}
