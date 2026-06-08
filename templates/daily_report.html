@@ -148,9 +148,14 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if laptop.last_scan_result_message %}
-                        <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:70] }}{%
-                            if laptop.last_scan_result_message|length > 70 %}...{% endif %}</span>
+                        {% if laptop.last_scan_threats_found is true %}
+                        <span style="color:#ff4444; font-weight:bold;">Fund!</span>
+                        {% elif laptop.last_scan_result_message %}
+                            {% if 'erfolgreich abgeschlossen' in laptop.last_scan_result_message %}
+                            <span title="{{ laptop.last_scan_result_message }}">OK</span>
+                            {% else %}
+                            <span title="{{ laptop.last_scan_result_message }}">{{ laptop.last_scan_result_message[:30] }}{% if laptop.last_scan_result_message|length > 30 %}...{% endif %}</span>
+                            {% endif %}
                         {% else %}
                         N/A
                         {% endif %}
