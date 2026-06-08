@@ -88,31 +88,63 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
     return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht", "user": user})
 
 @router.get("/dashboard/daily_report/csv", response_class=StreamingResponse)
-async def export_daily_report_csv(request: Request, report_date_str: Optional[str] = None, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
+async def export_daily_report_csv(request: Request, report_date_str: Optional[str] = None, selected_ids: Optional[str] = None, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):
     redirect = await check_auth(user)
     if redirect: return redirect
 
-    target_date: date
+    target_date: datetime
     if report_date_str:
-        try: target_date = date.fromisoformat(report_date_str)
-        except (ValueError, TypeError): target_date = date.today()
-    else: target_date = date.today()
+        try:
+            target_date = datetime.fromisoformat(report_date_str)
+            if target_date.tzinfo is None:
+                target_date = target_date.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            target_date = datetime.now(timezone.utc)
+    else:
+        target_date = datetime.now(timezone.utc)
     
     # ... (Rest der CSV-Logik hier einfügen)
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
+    
+    if selected_ids:
+        try:
+            id_list = [int(x) for x in selected_ids.split(',')]
+            all_laptops_db = [l for l in all_laptops_db if l.id in id_list]
+        except ValueError:
+            pass # ignore invalid ids
+            
+    all_laptops_db = sorted(all_laptops_db, key=lambda x: (x.alias_name or "").lower())
     from zoneinfo import ZoneInfo
     berlin_tz = ZoneInfo("Europe/Berlin")
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
-    writer.writerow(["Alias", "Hostname", "Letzter Scan (Lokalzeit)", "Status", "Bedrohungen"])
+    writer.writerow(["Alias", "Hostname", "Letzter Scan (Lokalzeit)", "Scan Ergebnis", "Bedrohungen"])
+    
+    now_utc = datetime.now(timezone.utc)
+    
     for laptop in all_laptops_db:
-        if laptop.last_scan_time:
-            scan_time_berlin = laptop.last_scan_time.replace(tzinfo=timezone.utc).astimezone(berlin_tz)
+        historical_report = crud.get_latest_scan_report_before(db, laptop.id, target_date)
+        
+        scan_time_str = "N/A"
+        scan_result = "N/A"
+        threats_str = "N/A"
+        
+        if historical_report:
+            scan_time_berlin = historical_report.client_scan_time.replace(tzinfo=timezone.utc).astimezone(berlin_tz)
             scan_time_str = scan_time_berlin.strftime('%d.%m.%Y %H:%M:%S')
-        else:
-            scan_time_str = "N/A"
-        writer.writerow([laptop.alias_name, laptop.hostname, scan_time_str, "OK", "Nein"]) # Beispiel
+            
+            if historical_report.threats_found is True:
+                scan_result = "Fund!"
+                threats_str = "Ja"
+            else:
+                scan_result = historical_report.scan_result_message or "Keine Meldung"
+                if len(scan_result) > 50:
+                    scan_result = scan_result[:50] + "..."
+                threats_str = "Nein"
+
+        writer.writerow([laptop.alias_name, laptop.hostname, scan_time_str, scan_result, threats_str])
+        
     output.seek(0)
     
     return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8-sig')), media_type="text/csv", headers={"Content-Disposition": f"attachment;filename=scanop_tagesbericht_{target_date.isoformat()}.csv"})
@@ -123,23 +155,46 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
     redirect = await check_auth(user)
     if redirect: return redirect
         
-    target_date: date
+    target_date: datetime
     report_title: str
     if report_date_str:
         try:
-            target_date = date.fromisoformat(report_date_str)
-            report_title = f"Tagesbericht für {target_date.strftime('%d.%m.%Y')}"
+            # Parse datetime string (YYYY-MM-DDThh:mm)
+            target_date = datetime.fromisoformat(report_date_str)
+            if target_date.tzinfo is None:
+                target_date = target_date.replace(tzinfo=timezone.utc)
+            report_title = f"Tagesbericht bis {target_date.strftime('%d.%m.%Y %H:%M')}"
         except (ValueError, TypeError):
-            target_date = date.today()
-            report_title = f"Tagesbericht für HEUTE ({target_date.strftime('%d.%m.%Y')}) - Ungültiges Datum angegeben"
+            target_date = datetime.now(timezone.utc)
+            report_title = f"Tagesbericht bis JETZT ({target_date.strftime('%d.%m.%Y %H:%M')}) - Ungültiges Datum angegeben"
     else:
-        target_date = date.today()
-        report_title = f"Tagesbericht für {target_date.strftime('%d.%m.%Y')}"
+        target_date = datetime.now(timezone.utc)
+        report_title = f"Tagesbericht bis {target_date.strftime('%d.%m.%Y %H:%M')}"
+    
     all_laptops_db = crud.get_laptops(db=db, limit=10000)
     all_laptops_db = sorted(all_laptops_db, key=lambda x: (x.alias_name or "").lower())
+    
     report_data = []
     now_utc = datetime.now(timezone.utc)
+    
     for laptop in all_laptops_db:
+        # Fetch historical report up to target_date
+        historical_report = crud.get_latest_scan_report_before(db, laptop.id, target_date)
+        
+        # Override laptop properties temporarily with historical data
+        if historical_report:
+            laptop.last_scan_time = historical_report.client_scan_time
+            laptop.last_scan_type = historical_report.scan_type
+            laptop.last_scan_result_message = historical_report.scan_result_message
+            laptop.last_scan_threats_found = historical_report.threats_found
+            laptop.last_scan_duration_minutes = None # We don't have duration in historical reports right now
+        else:
+            laptop.last_scan_time = None
+            laptop.last_scan_type = None
+            laptop.last_scan_result_message = None
+            laptop.last_scan_threats_found = None
+            laptop.last_scan_duration_minutes = None
+
         status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.replace(tzinfo=timezone.utc)
@@ -153,8 +208,13 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
                 status_text, color_class = "OK (Scan älter)", "status-yellow"
         else:
             status_text, color_class = "Kein Scan bisher", "status-white"
+            
         report_data.append({"db_data": laptop, "status_text": status_text, "status_color_class": color_class})
-    return templates.TemplateResponse("daily_report.html", {"request": request, "report_date_iso": target_date.isoformat(), "report_date_display": target_date.strftime('%d.%m.%Y'), "laptops_report_data": report_data, "title": report_title, "user": user})
+        
+    # Format target_date into ISO string expected by input type="datetime-local"
+    # Example: 2026-06-08T14:30
+    iso_local_str = target_date.astimezone().strftime('%Y-%m-%dT%H:%M')
+    return templates.TemplateResponse("daily_report.html", {"request": request, "report_date_iso": iso_local_str, "report_date_display": target_date.strftime('%d.%m.%Y %H:%M'), "laptops_report_data": report_data, "title": report_title, "user": user})
 
 @router.get("/dashboard/updates", response_class=HTMLResponse)
 async def web_client_updates(request: Request, db: Session = Depends(get_db), user: Optional[str] = Depends(get_current_user_or_none)):

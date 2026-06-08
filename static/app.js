@@ -304,13 +304,87 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.update-client-btn').forEach(attachUpdateClientListener);
 
     const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
     const reportTable = document.getElementById('daily-report-table');
+    const masterReportCheckbox = document.getElementById('master-report-checkbox');
+    const reportCheckboxes = document.querySelectorAll('.report-row-checkbox');
+
+    if (masterReportCheckbox) {
+        masterReportCheckbox.addEventListener('change', (e) => {
+            reportCheckboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+
+    function getSelectedLaptopIds() {
+        const checked = Array.from(reportCheckboxes).filter(cb => cb.checked);
+        return checked.map(cb => cb.value);
+    }
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dateInput = document.getElementById('report_date_str');
+            let url = '/dashboard/daily_report/csv?';
+            if (dateInput && dateInput.value) {
+                url += `report_date_str=${encodeURIComponent(dateInput.value)}&`;
+            }
+            const selectedIds = getSelectedLaptopIds();
+            if (selectedIds.length > 0) {
+                url += `selected_ids=${selectedIds.join(',')}`;
+            }
+            window.location.href = url;
+        });
+    }
+
+    const prevTimeBtn = document.getElementById('prev-time-btn');
+    const nextTimeBtn = document.getElementById('next-time-btn');
+    const todayTimeBtn = document.getElementById('today-time-btn');
+    const reportDateInput = document.getElementById('report_date_str');
+    const reportForm = reportDateInput ? reportDateInput.closest('form') : null;
+
+    if (reportDateInput && reportForm) {
+        if (prevTimeBtn) prevTimeBtn.addEventListener('click', () => {
+            let dt = new Date(reportDateInput.value || Date.now());
+            dt.setDate(dt.getDate() - 1);
+            dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+            reportDateInput.value = dt.toISOString().slice(0, 16);
+            reportForm.submit();
+        });
+        if (nextTimeBtn) nextTimeBtn.addEventListener('click', () => {
+            let dt = new Date(reportDateInput.value || Date.now());
+            dt.setDate(dt.getDate() + 1);
+            dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+            reportDateInput.value = dt.toISOString().slice(0, 16);
+            reportForm.submit();
+        });
+        if (todayTimeBtn) todayTimeBtn.addEventListener('click', () => {
+            let dt = new Date();
+            dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+            reportDateInput.value = dt.toISOString().slice(0, 16);
+            reportForm.submit();
+        });
+    }
 
     if (exportPdfBtn && reportTable && window.jspdf && window.jspdf.jsPDF) {
         exportPdfBtn.addEventListener('click', () => {
+            const selectedIds = getSelectedLaptopIds();
+            let rowsHidden = [];
+            
+            // Wenn welche ausgewählt sind, blende die anderen für den PDF-Export aus
+            if (selectedIds.length > 0) {
+                const rows = reportTable.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cb = row.querySelector('.report-row-checkbox');
+                    if (cb && !cb.checked) {
+                        rowsHidden.push({row: row, display: row.style.display});
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: "landscape" });
-            const reportTitle = document.querySelector('main h2')?.textContent || "ScanOp Tagesbericht";
+            let reportTitle = document.querySelector('main h2')?.textContent || "ScanOp Tagesbericht";
             doc.setFontSize(18);
             doc.text(reportTitle, 14, 20);
             doc.setFontSize(11);
@@ -320,13 +394,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 theme: 'grid',
                 headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
                 alternateRowStyles: { fillColor: [245, 245, 245] },
+                columns: [
+                    { header: 'Nr.', dataKey: 1 },
+                    { header: 'Alias', dataKey: 2 },
+                    { header: 'Hostname', dataKey: 3 },
+                    { header: 'Letzter Scan (Lokal)', dataKey: 4 },
+                    { header: 'Scan Ergebnis', dataKey: 5 },
+                    { header: 'Status', dataKey: 6 }
+                ]
             });
             let reportDateStr = 'bericht';
             const reportDateElement = document.querySelector('main h2');
-            if (reportDateElement.textContent.includes(' am ')) {
+            if (reportDateElement && reportDateElement.textContent.includes(' am ')) {
                 reportDateStr = reportDateElement.textContent.split(' am ')[1] || 'bericht';
+            } else if (reportDateElement && reportDateElement.textContent.includes(' bis ')) {
+                reportDateStr = reportDateElement.textContent.split(' bis ')[1] || 'bericht';
             }
-            doc.save(`scanop_tagesbericht_${reportDateStr.replace(/\./g, '-')}.pdf`);
+            doc.save(`scanop_tagesbericht_${reportDateStr.replace(/[\.\s:]/g, '-')}.pdf`);
+
+            // Versteckte Zeilen wieder einblenden
+            rowsHidden.forEach(item => {
+                item.row.style.display = item.display;
+            });
         });
     } else if (exportPdfBtn) {
         console.warn("jsPDF oder jsPDF-AutoTable nicht geladen. PDF-Export nicht verfügbar.");
@@ -436,14 +525,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (visible) {
                 // 'online' filter
                 if (filters['online']) {
-                    const isOnline = text.includes('online'); // simple heuristic
+                    const onlineCell = row.querySelector('[data-value="True"], [data-value="False"]');
+                    const isOnline = onlineCell ? (onlineCell.getAttribute('data-value') === 'True') : false;
                     if (filters['online'] === '1' && !isOnline) visible = false;
                     if (filters['online'] === '2' && isOnline) visible = false;
                 }
 
                 // 'bedrohung' filter
                 if (filters['bedrohung']) {
-                    const hasThreat = text.includes('bedrohung');
+                    const hasThreat = text.includes('fund!') || text.includes('siehe bericht') || text.includes('bedrohung');
                     if (filters['bedrohung'] === '1' && !hasThreat) visible = false;
                     if (filters['bedrohung'] === '2' && hasThreat) visible = false;
                 }

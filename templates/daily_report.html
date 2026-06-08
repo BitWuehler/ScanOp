@@ -64,16 +64,19 @@
         <div class="glass-container form-container actions-bar"
             style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Bericht & Export:</h3>
-            <form method="get" action="{{ url_for('web_daily_report') }}"
-                style="display: flex; gap: 10px; align-items: center; margin: 0;">
-                <label for="report_date_str" style="margin: 0;">Datum (YYYY-MM-DD):</label>
-                <input type="date" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
-                    placeholder="YYYY-MM-DD" style="width: 150px; padding: 8px; color-scheme: dark;">
+            <form method="get" action="/dashboard/daily_report"
+                style="display: flex; gap: 10px; align-items: center; margin: 0; flex-wrap: nowrap;">
+                
+                <button type="button" id="prev-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag zurück">◀</button>
+                <button type="button" id="today-time-btn" class="button-secondary" style="padding: 8px 15px;" title="Auf heute setzen">Heute</button>
+                <button type="button" id="next-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag vor">▶</button>
+                
+                <input type="datetime-local" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
+                    style="width: 200px; padding: 8px; color-scheme: dark;">
                 <button type="submit" style="padding: 8px 15px;">Anzeigen</button>
             </form>
             <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
-            <a href="{{ url_for('export_daily_report_csv') }}?report_date_str={{ report_date_iso }}" class="button-link"
-                id="export-csv-btn">Als CSV exportieren</a>
+            <a href="#" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
             <button id="export-pdf-btn">Als PDF exportieren</button>
         </div>
 
@@ -99,6 +102,7 @@
         <table id="daily-report-table" class="daily-report-table sortable" data-sortable>
             <thead>
                 <tr>
+                    <th data-sortable="false" style="width: 40px; text-align: center;"><input type="checkbox" id="master-report-checkbox" title="Alle ein-/abwählen"></th>
                     <th data-sortable="false">Nr.</th>
                     <th>Alias</th>
                     <th>Hostname</th>
@@ -111,6 +115,7 @@
                 {% for item in laptops_report_data %}
                 {% set laptop = item.db_data %}
                 <tr id="{{ laptop.alias_name }}" class="laptop-report-row">
+                    <td style="text-align: center;"><input type="checkbox" class="report-row-checkbox" value="{{ laptop.id }}"></td>
                     <td class="index-cell" style="font-weight: bold; color: var(--text-muted); text-align: center;"></td>
                     <td>{{ laptop.alias_name }}</td>
                     <td>{{ laptop.hostname }}</td>

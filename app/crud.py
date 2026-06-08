@@ -124,5 +124,11 @@ def create_scan_report(db: Session, report_payload: schemas.ScanReportCreate) ->
 def get_scan_reports_for_laptop(db: Session, laptop_id: int, skip: int = 0, limit: int = 100) -> List[models.ScanReport]:
     return db.query(models.ScanReport).filter(models.ScanReport.laptop_id == laptop_id).order_by(models.ScanReport.client_scan_time.desc()).offset(skip).limit(limit).all()
 
+def get_latest_scan_report_before(db: Session, laptop_id: int, target_dt: datetime) -> Union[models.ScanReport, None]:
+    return db.query(models.ScanReport).filter(
+        models.ScanReport.laptop_id == laptop_id,
+        models.ScanReport.client_scan_time <= target_dt
+    ).order_by(models.ScanReport.client_scan_time.desc()).first()
+
 def get_all_scan_reports(db: Session, skip: int = 0, limit: int = 1000) -> List[models.ScanReport]:
     return db.query(models.ScanReport).order_by(models.ScanReport.report_time_on_server.desc()).offset(skip).limit(limit).all()
