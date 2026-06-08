@@ -388,16 +388,21 @@ document.addEventListener('DOMContentLoaded', () => {
             let rowsHidden = [];
             
             // Wenn welche ausgewählt sind, blende die anderen für den PDF-Export aus
-            if (selectedIds.length > 0) {
-                const rows = reportTable.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    const cb = row.querySelector('.report-row-checkbox');
-                    if (cb && !cb.checked) {
-                        rowsHidden.push({row: row, display: row.style.display});
-                        row.style.display = 'none';
+            let count = 1;
+            const rows = reportTable.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cb = row.querySelector('.report-row-checkbox');
+                if (selectedIds.length > 0 && cb && !cb.checked) {
+                    rowsHidden.push({row: row, display: row.style.display});
+                    row.style.display = 'none';
+                } else {
+                    // Inject number for PDF parsing
+                    const indexCell = row.querySelector('.index-cell');
+                    if (indexCell) {
+                        indexCell.innerText = count++;
                     }
-                });
-            }
+                }
+            });
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: "landscape" });
@@ -429,7 +434,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             doc.save(`scanop_tagesbericht_${reportDateStr.replace(/[\.\s:]/g, '-')}.pdf`);
 
-            // Versteckte Zeilen wieder einblenden
+            // Versteckte Zeilen wieder einblenden und Nummern löschen
+            rows.forEach(row => {
+                const indexCell = row.querySelector('.index-cell');
+                if (indexCell) indexCell.innerText = '';
+            });
             rowsHidden.forEach(item => {
                 item.row.style.display = item.display;
             });
