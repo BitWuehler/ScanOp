@@ -129,14 +129,16 @@
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
                         {% if laptop.last_scan_threats_found is true %}
-                        <span style="color:#ff4444; font-weight:bold;">Fund! siehe Bericht</span>
+                        <span style="color:#ff4444; font-weight:bold;">Fund!</span>
                         {% else %}
                         <span title="{{ laptop.last_scan_result_message if laptop.last_scan_result_message else '' }}">{{ item.simplified_result_message }}</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if laptop.last_scan_threats_found is not none %}
-                        {{ "Ja" if laptop.last_scan_threats_found else "Nein" }}
+                        {% if laptop.last_scan_threats_found is true %}
+                        <span style="color:#ff4444; font-weight:bold;">siehe Bericht</span>
+                        {% elif laptop.last_scan_threats_found is not none %}
+                        Nein
                         {% else %}
                         N/A
                         {% endif %}
