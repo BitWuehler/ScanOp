@@ -11,6 +11,10 @@
     <link rel="shortcut icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/assets/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/de.js"></script>
 </head>
 
 <body>
@@ -71,8 +75,8 @@
                 <button type="button" id="today-time-btn" class="button-secondary" style="padding: 8px 15px;" title="Auf heute setzen">Heute</button>
                 <button type="button" id="next-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag vor">▶</button>
                 
-                <input type="datetime-local" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
-                    style="width: 200px; padding: 8px; color-scheme: dark;">
+                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
+                    placeholder="Wähle Datum & Uhrzeit" style="width: 220px; padding: 8px; color-scheme: dark; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 4px;">
                 <button type="submit" style="padding: 8px 15px;">Anzeigen</button>
             </form>
             <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>

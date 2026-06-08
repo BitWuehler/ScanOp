@@ -342,25 +342,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportDateInput = document.getElementById('report_date_str');
     const reportForm = reportDateInput ? reportDateInput.closest('form') : null;
 
+    let fpInstance = null;
+    if (reportDateInput && window.flatpickr) {
+        fpInstance = flatpickr(reportDateInput, {
+            enableTime: true,
+            dateFormat: "Y-m-d\\TH:i",
+            time_24hr: true,
+            locale: "de",
+            allowInput: true
+        });
+    }
+
     if (reportDateInput && reportForm) {
         if (prevTimeBtn) prevTimeBtn.addEventListener('click', () => {
             let dt = new Date(reportDateInput.value || Date.now());
             dt.setDate(dt.getDate() - 1);
             dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-            reportDateInput.value = dt.toISOString().slice(0, 16);
+            const newVal = dt.toISOString().slice(0, 16);
+            if (fpInstance) fpInstance.setDate(newVal);
+            else reportDateInput.value = newVal;
             reportForm.submit();
         });
         if (nextTimeBtn) nextTimeBtn.addEventListener('click', () => {
             let dt = new Date(reportDateInput.value || Date.now());
             dt.setDate(dt.getDate() + 1);
             dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-            reportDateInput.value = dt.toISOString().slice(0, 16);
+            const newVal = dt.toISOString().slice(0, 16);
+            if (fpInstance) fpInstance.setDate(newVal);
+            else reportDateInput.value = newVal;
             reportForm.submit();
         });
         if (todayTimeBtn) todayTimeBtn.addEventListener('click', () => {
             let dt = new Date();
             dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-            reportDateInput.value = dt.toISOString().slice(0, 16);
+            const newVal = dt.toISOString().slice(0, 16);
+            if (fpInstance) fpInstance.setDate(newVal);
+            else reportDateInput.value = newVal;
             reportForm.submit();
         });
     }
