@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function convertTableDateTimes() {
-        document.querySelectorAll('td.date-cell').forEach(cell => {
+        document.querySelectorAll('.date-cell').forEach(cell => {
             const utcTime = cell.dataset.utcTime;
             cell.textContent = formatUtcToLocalDateTime(utcTime);
         });
@@ -800,6 +800,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             existingCells[i].querySelectorAll('.delete-laptop-button').forEach(btn => attachDeleteListener(btn));
                             existingCells[i].querySelectorAll('.update-client-btn').forEach(btn => attachUpdateClientListener(btn));
                         }
+                        // Update attributes
+                        if (newCells[i].hasAttribute('data-utc-time')) {
+                            existingCells[i].setAttribute('data-utc-time', newCells[i].getAttribute('data-utc-time'));
+                        } else {
+                            existingCells[i].removeAttribute('data-utc-time');
+                        }
+                        if (newCells[i].hasAttribute('data-value')) {
+                            existingCells[i].setAttribute('data-value', newCells[i].getAttribute('data-value'));
+                        } else {
+                            existingCells[i].removeAttribute('data-value');
+                        }
+
                         // Update classes
                         if (existingCells[i].className !== newCells[i].className) {
                             existingCells[i].className = newCells[i].className;

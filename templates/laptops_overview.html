@@ -25,15 +25,14 @@
         </div>
         <nav style="display: flex; align-items: center; gap: 20px;">
             <ul>
-                <li><a href="{{ url_for('web_laptops_overview') }}">Laptop Übersicht</a></li>
-
-                <li><a href="{{ url_for('web_client_updates') }}">Client Updates</a></li>
-                <li><a href="{{ url_for('logout') }}" style="color: #ffc107;">Logout ({{ user }})</a></li>
+                <li><a href="{{ url_for('web_laptops_overview') }}">Übersicht</a></li>
+                <li><a href="{{ url_for('web_client_updates') }}">Updates</a></li>
             </ul>
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">Menü ▾</button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
                     <a href="{{ url_for('web_daily_report') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄 Tagesbericht öffnen</a>
+                    <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🚪 Logout ({{ user }})</a>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
                     <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">⚙️ Einstellungen</h3>
                     <label
@@ -118,11 +117,22 @@
                     <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
                         {{ item.scan_status.text }}
                     </td>
-                    <td class="date-cell {{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></td>
-                    <td class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></td>
+                    <td class="{{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}">
+                        <span class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_api_contact) }}"></span>
+                    </td>
+                    <td>
+                        <span class="date-cell" data-utc-time="{{ to_utc_iso(laptop.last_scan_time) }}"></span>
+                        {% if laptop.last_scan_duration_minutes is not none %}
+                        <span class="scan-duration"> ({{ laptop.last_scan_duration_minutes }} min)</span>
+                        {% endif %}
+                    </td>
                     <td>{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
                     <td>
+                        {% if laptop.last_scan_threats_found is true %}
+                        <span style="color:#ff4444; font-weight:bold;">Fund! siehe Bericht</span>
+                        {% else %}
                         <span title="{{ laptop.last_scan_result_message if laptop.last_scan_result_message else '' }}">{{ item.simplified_result_message }}</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if laptop.last_scan_threats_found is not none %}
@@ -131,10 +141,11 @@
                         N/A
                         {% endif %}
                     </td>
-                    <td class="pending-command-cell">
+                    <td class="pending-command-cell" style="white-space: nowrap;">
+                        {% if laptop.pending_command == "Scan" and laptop.pending_scan_type %}
+                        {{ laptop.pending_scan_type }}
+                        {% else %}
                         {{ laptop.pending_command if laptop.pending_command else 'Kein' }}
-                        {% if laptop.pending_command and laptop.pending_scan_type %}
-                        ({{ laptop.pending_scan_type }})
                         {% endif %}
                     </td>
                     <td class="actions-cell">

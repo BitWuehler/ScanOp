@@ -24,6 +24,7 @@ class Laptop(LaptopBase):
     last_scan_type: Optional[str] = None
     last_scan_result_message: Optional[str] = None
     last_scan_threats_found: Optional[bool] = None
+    last_scan_duration_minutes: Optional[int] = None
     pending_command: Optional[str] = None
     command_issue_time: Optional[datetime] = None
 

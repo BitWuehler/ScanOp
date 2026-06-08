@@ -105,6 +105,13 @@ def create_scan_report(db: Session, report_payload: schemas.ScanReportCreate) ->
     db_laptop.last_scan_result_message = report_payload.scan_result_message
     db_laptop.last_scan_threats_found = report_payload.threats_found
     
+    # Dauer berechnen
+    client_time_aware = report_payload.client_scan_time
+    if client_time_aware.tzinfo is None:
+        client_time_aware = client_time_aware.replace(tzinfo=timezone.utc)
+    duration_minutes = int((datetime.now(timezone.utc) - client_time_aware).total_seconds() / 60)
+    db_laptop.last_scan_duration_minutes = duration_minutes
+    
     db_laptop.last_api_contact = datetime.now(timezone.utc)
     db_laptop.pending_command = None
     db_laptop.command_issue_time = None

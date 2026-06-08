@@ -18,6 +18,7 @@ class Laptop(Base):
     last_scan_type = Column(String, nullable=True)
     last_scan_result_message = Column(Text, nullable=True)
     last_scan_threats_found = Column(Boolean, nullable=True)
+    last_scan_duration_minutes = Column(Integer, nullable=True)
 
     pending_command = Column(String, nullable=True)
     pending_scan_type = Column(String, nullable=True)
