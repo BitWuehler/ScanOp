@@ -77,19 +77,25 @@
             style="min-height: 70px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; box-sizing: border-box;">
             <h3 style="margin: 0; font-size: 1rem; margin-right: 10px; color: var(--text-main);">Bericht & Export:</h3>
             <form method="get" action="/dashboard/daily_report"
-                style="display: flex; gap: 10px; align-items: center; margin: 0; flex-wrap: nowrap;">
+                style="display: flex; gap: 10px; align-items: center; margin: 0; flex-wrap: wrap;">
                 
-                <button type="button" id="prev-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag zurück">◀</button>
-                <button type="button" id="today-time-btn" class="button-secondary" style="padding: 8px 15px;" title="Auf heute setzen">Heute</button>
-                <button type="button" id="next-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag vor">▶</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="prev-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag zurück">◀</button>
+                    <button type="button" id="today-time-btn" class="button-secondary" style="padding: 8px 15px;" title="Auf heute setzen">Heute</button>
+                    <button type="button" id="next-time-btn" class="button-secondary" style="padding: 8px 12px; font-size: 1.1em;" title="Einen Tag vor">▶</button>
+                </div>
                 
-                <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
-                    placeholder="Wähle Datum & Uhrzeit" style="width: 220px; padding: 8px; color-scheme: dark; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 4px;">
-                <button type="submit" style="padding: 8px 15px;">Anzeigen</button>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="report_date_str" name="report_date_str" value="{{ report_date_iso }}"
+                        placeholder="Wähle Datum & Uhrzeit" style="width: 220px; padding: 8px; color-scheme: dark; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 4px;">
+                    <button type="submit" style="padding: 8px 15px;">Anzeigen</button>
+                </div>
             </form>
-            <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
-            <a href="#" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
-            <button id="export-pdf-btn">Als PDF exportieren</button>
+            <div class="hide-on-mobile" style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
+            <div class="action-buttons-container" style="display: flex; gap: 10px;">
+                <a href="#" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
+                <button id="export-pdf-btn">Als PDF exportieren</button>
+            </div>
         </div>
 
         <div class="filter-bar"
