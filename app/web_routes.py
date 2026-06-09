@@ -58,18 +58,35 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             if (now_utc - contact_aware) <= timedelta(minutes=5):
                 is_online = True
                 
-        status_info = {"text": "Unbekannt", "color_class": "status-unknown"} 
+        status_info = {"text": "Unbekannt", "color_class": "status-unknown", "style": ""} 
         if laptop_instance.last_scan_time is not None:
             last_scan_time_aware = laptop_instance.last_scan_time.replace(tzinfo=timezone.utc)
             time_since_last_scan = now_utc - last_scan_time_aware
+            hours_since = time_since_last_scan.total_seconds() / 3600.0
+            hours_rounded = round(hours_since)
+            
             if laptop_instance.last_scan_threats_found is True:
-                status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red"}
-            elif time_since_last_scan <= timedelta(hours=5):
-                status_info = {"text": "OK (<5h)", "color_class": "status-green"}
-            else: 
-                status_info = {"text": "OK (>5h)", "color_class": "status-yellow"}
+                status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red", "style": ""}
+            else:
+                if hours_since <= 5:
+                    hue = 120 # Green
+                elif hours_since <= 12:
+                    ratio = (hours_since - 5) / 7.0
+                    hue = 120 - (ratio * 90)
+                elif hours_since <= 24:
+                    ratio = (hours_since - 12) / 12.0
+                    hue = 30 - (ratio * 30)
+                else:
+                    hue = 0 # Red
+                
+                status_info = {
+                    "text": f"OK ({hours_rounded}h)", 
+                    "color_class": "", 
+                    "style": f"color: hsl({hue}, 80%, 50%); font-weight: bold;"
+                }
         else:
-            status_info = {"text": "Kein Scan bisher", "color_class": "status-white"}
+            status_info = {"text": "Kein Scan bisher", "color_class": "status-white", "style": ""}
+            hours_rounded = 999999 # So it's always considered outdated if never scanned
             
         simplified_result_message = "N/A"
         if laptop_instance.last_scan_result_message:
@@ -83,6 +100,7 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             "db_data": laptop_instance, 
             "scan_status": status_info,
             "is_online": is_online,
+            "scan_hours": hours_rounded,
             "simplified_result_message": simplified_result_message
         })
     return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht", "user": user})
@@ -230,6 +248,7 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
     for laptop in all_laptops_db:
         is_online = False
         status_text = "Offline"
+        short_status_text = "Off"
         color_class = "status-red"
         
         if laptop.last_api_contact:
@@ -238,20 +257,25 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
             if delta <= timedelta(minutes=5):
                 is_online = True
                 status_text = "Online"
+                short_status_text = "Online"
                 color_class = "status-green"
             else:
                 mins = int(delta.total_seconds() / 60)
                 if mins < 60:
                     status_text = f"Offline ({mins}m)"
+                    short_status_text = f"{mins}m"
                 elif mins < 1440:
                     status_text = f"Offline ({mins//60}h)"
+                    short_status_text = f"{mins//60}h"
                 else:
                     status_text = f"Offline ({mins//1440}d)"
+                    short_status_text = f"{mins//1440}d"
                 
         laptops_with_status.append({
             "db_data": laptop,
             "is_online": is_online,
             "status_text": status_text,
+            "short_status_text": short_status_text,
             "color_class": color_class
         })
         

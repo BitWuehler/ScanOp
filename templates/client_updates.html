@@ -124,7 +124,10 @@
                     </td>
                     <td>{{ laptop.alias_name }}</td>
                     <td class="hide-on-mobile">{{ laptop.hostname }}</td>
-                    <td class="{{ item.color_class }}">{{ item.status_text }}</td>
+                    <td class="{{ item.color_class }}">
+                        <span class="hide-on-mobile">{{ item.status_text }}</span>
+                        <span class="show-on-mobile" style="display:none;">{{ item.short_status_text }}</span>
+                    </td>
                     <td class="version-cell {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-cell{% endif %}" style="padding-right: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span

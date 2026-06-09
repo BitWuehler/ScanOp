@@ -89,7 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const commandCell = row.querySelector('.pending-command-cell');
             const actionsCell = row.querySelector('.actions-cell');
             if (commandCell) {
-                commandCell.textContent = command ? `${command} (${scanType || ''})`.trim() : 'Kein';
+                if (command === "START_SCAN" && scanType) {
+                    commandCell.textContent = scanType;
+                } else {
+                    commandCell.textContent = command ? `${command} (${scanType || ''})`.trim() : 'Kein';
+                }
             }
             if (actionsCell) {
                 let cancelButton = actionsCell.querySelector(`.cancel-command-button[data-laptop-alias="${laptopAlias}"]`);
@@ -599,6 +603,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (filters['fehler'] === '1' && !hasError) visible = false;
                     if (filters['fehler'] === '2' && hasError) visible = false;
                 }
+
+                // 'veraltet' filter
+                if (filters['veraltet']) {
+                    const scanHoursAttr = row.getAttribute('data-scan-hours');
+                    const scanHours = scanHoursAttr ? parseFloat(scanHoursAttr) : 0;
+                    const outdatedHoursInput = document.getElementById('settings_outdated_hours');
+                    const threshold = outdatedHoursInput ? parseFloat(outdatedHoursInput.value) : 12;
+                    const isOutdated = scanHours > threshold;
+                    if (filters['veraltet'] === '1' && !isOutdated) visible = false;
+                    if (filters['veraltet'] === '2' && isOutdated) visible = false;
+                }
             }
 
             if (visible) {
@@ -643,6 +658,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 saveGlobalFilterState();
             }
+        });
+    }
+
+    const outdatedHoursInput = document.getElementById('settings_outdated_hours');
+    if (outdatedHoursInput) {
+        const savedHours = localStorage.getItem('scanop_outdated_hours');
+        if (savedHours) outdatedHoursInput.value = savedHours;
+        outdatedHoursInput.addEventListener('change', (e) => {
+            localStorage.setItem('scanop_outdated_hours', e.target.value);
+            applyFilters();
         });
     }
 

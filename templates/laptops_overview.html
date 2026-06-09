@@ -46,7 +46,11 @@
                     <label
                         style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
-                        Übergreifender Filter
+                        "Ok" Laptops ausblenden
+                    </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
+                        <span>Veraltet ab (h)</span>
+                        <input type="number" id="settings_outdated_hours" min="1" value="12" style="width: 60px; padding: 4px; border-radius: 4px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text-main);">
                     </label>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
                     <label for="settings_github_repo_url"
@@ -87,6 +91,7 @@
                     <button class="filter-btn" data-state="0" data-filter="online">Online</button>
                     <button class="filter-btn" data-state="0" data-filter="bedrohung">Bedrohung</button>
                     <button class="filter-btn" data-state="0" data-filter="fehler">Fehler</button>
+                    <button class="filter-btn" data-state="0" data-filter="veraltet">Veraltet</button>
                 </div>
                 <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)"
                     style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
@@ -115,15 +120,18 @@
             <tbody>
                 {% for item in laptops_list %}
                 {% set laptop = item.db_data %}
-                <tr id="laptop-row-{{ laptop.alias_name }}">
-                    <td style="text-align: center;">
+                <tr id="laptop-row-{{ laptop.alias_name }}" data-scan-hours="{{ item.scan_hours }}">
+                    <td style="text-align: center; position: relative;">
                         <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}">
+                        {% if item.is_online %}
+                        <span class="show-on-mobile" style="display:none; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 5px #22c55e;"></span>
+                        {% endif %}
                     </td>
                     <td>
                         {{ laptop.alias_name }}
                     </td>
                     <td class="hide-on-mobile">{{ laptop.hostname }}</td>
-                    <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.color_class }}">
+                    <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.text }}" style="{{ item.scan_status.style }}">
                         {{ item.scan_status.text }}
                     </td>
                     <td class="hide-on-mobile {{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}">
@@ -153,7 +161,7 @@
                         {% endif %}
                     </td>
                     <td class="hide-on-mobile pending-command-cell" style="white-space: nowrap;">
-                        {% if laptop.pending_command == "Scan" and laptop.pending_scan_type %}
+                        {% if laptop.pending_command == "START_SCAN" and laptop.pending_scan_type %}
                         {{ laptop.pending_scan_type }}
                         {% else %}
                         {{ laptop.pending_command if laptop.pending_command else 'Kein' }}
