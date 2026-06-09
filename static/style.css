@@ -630,7 +630,8 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     right: -350px;
     width: 300px;
     height: 100vh;
-    background: rgba(10, 10, 20, 1);
+    background: rgba(10, 10, 20, 0.98);
+    backdrop-filter: blur(10px);
     border-left: 1px solid var(--glass-border);
     z-index: 2000;
     padding: 20px;
@@ -691,8 +692,8 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 .mobile-bulk-fab:active { transform: scale(0.9) translateZ(0); }
 
 @media (max-width: 1000px) {
-    .row-actions-handle { display: flex !important; }
-    .mobile-bulk-fab { display: flex !important; }
+    .row-actions-handle { display: flex; }
+    .mobile-bulk-fab { display: flex; }
     
     /* Ensure rows don't overflow the absolute slider */
     tbody tr {
