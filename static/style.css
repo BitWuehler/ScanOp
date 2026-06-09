@@ -622,8 +622,50 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
   .nav-dropdown-btn { padding: 8px 12px; }
 }
 
-/* FAB and Mobile Action Slider */
-.mobile-action-fab {
+
+/* Settings Off-Canvas */
+.settings-dropdown {
+    position: fixed !important;
+    top: 0;
+    right: -350px;
+    width: 300px;
+    height: 100vh;
+    background: rgba(10, 10, 20, 0.98);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid var(--glass-border);
+    z-index: 2000;
+    padding: 20px;
+    padding-top: 50px;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    display: block !important;
+}
+.settings-dropdown.settings-open {
+    right: 0;
+}
+
+/* Row Actions Handle (Mobile) */
+.row-actions-handle {
+    display: none;
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 60px;
+    background: #0d6efd;
+    color: white;
+    border-radius: 8px 0 0 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1001;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Bulk Actions FAB (Mobile) */
+.mobile-bulk-fab {
     display: none;
     position: fixed;
     bottom: 30px;
@@ -631,57 +673,73 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: #0d6efd;
+    background: #6c757d;
     color: white;
     border: none;
-    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     z-index: 1000;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s, background 0.3s;
+    transition: transform 0.2s;
 }
-.mobile-action-fab:active {
-    transform: scale(0.9);
-}
+.mobile-bulk-fab:active { transform: scale(0.9); }
 
 @media (max-width: 1000px) {
-    .mobile-action-fab {
-        display: flex;
+    .row-actions-handle { display: flex; }
+    .mobile-bulk-fab { display: flex; }
+    
+    /* Ensure rows don't overflow the absolute slider */
+    tbody tr {
+        position: relative;
+        overflow: hidden;
     }
     
-    /* Hide top menu and bulk actions by default on mobile, toggle via body class */
-    .header-left, .actions-bar {
-        display: none !important;
-    }
-    body.show-mobile-actions .header-left,
-    body.show-mobile-actions .actions-bar {
-        display: flex !important;
-    }
-
-    /* Actions slider in rows */
+    /* Slider mechanics */
     .actions-cell {
         position: absolute;
         right: 0;
         top: 0;
         height: 100%;
-        background: rgba(20, 20, 40, 0.95);
+        background: rgba(30, 30, 50, 0.95);
         backdrop-filter: blur(5px);
         transform: translateX(100%);
         transition: transform 0.3s ease-in-out;
         display: flex;
         align-items: center;
         border-left: 1px solid rgba(255,255,255,0.1);
-        padding: 0 15px;
+        padding: 0 10px;
         z-index: 10;
+        width: 150px;
+        justify-content: center;
     }
     
     body.show-mobile-actions .actions-cell {
         transform: translateX(0);
     }
-    
-    tbody tr {
-        position: relative;
-        overflow: hidden; /* Prevent action cell overflow from showing */
+    body.show-mobile-actions .row-actions-handle {
+        transform: translate(-170px, -50%);
+    }
+
+    /* Floating Bulk Actions Panel */
+    .actions-bar {
+        position: fixed;
+        bottom: -150%;
+        left: 0;
+        width: 100%;
+        background: rgba(20, 20, 40, 0.95);
+        backdrop-filter: blur(10px);
+        z-index: 1002;
+        transition: bottom 0.3s ease;
+        flex-direction: column !important;
+        padding: 20px !important;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        margin: 0 !important;
+        box-sizing: border-box;
+        display: flex !important;
+        align-items: center;
+    }
+    body.show-bulk-actions .actions-bar {
+        bottom: 0;
     }
 }

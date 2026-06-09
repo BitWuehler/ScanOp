@@ -33,7 +33,8 @@
                     <span class="menu-text">Menü ▾</span>
                     <span class="menu-icon show-on-mobile" style="display:none;">☰</span>
                 </button>
-                <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
+                <div id="settings-dropdown" class="settings-dropdown glass-container hidden">
+<button id="settings-close-btn" style="position:absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
                     <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
                         <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="layout-dashboard"></i> Übersicht</a>
                         <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="refresh-cw"></i> Updates</a>
@@ -118,14 +119,14 @@
             <tbody>
                 {% for item in laptops_list %}
                 {% set laptop = item.db_data %}
-                <tr id="laptop-row-{{ laptop.alias_name }}">
+                <tr id="laptop-row-{{ laptop.alias_name }}" data-scan-hours="{{ item.scan_hours }}">
                     <td style="text-align: center;">
                         <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}"
                             data-version="{{ laptop.client_version or '0.0.0' }}">
                     </td>
                     <td>{{ laptop.alias_name }}</td>
                     <td class="hide-on-mobile">{{ laptop.hostname }}</td>
-                    <td class="{{ item.color_class }}">
+                    <td class="{{ item.color_class }}" data-value="{{ item.is_online }}">
                         <span class="hide-on-mobile">{{ item.status_text }}</span>
                         <span class="show-on-mobile" style="display:none;">{{ item.short_status_text }}</span>
                     </td>
@@ -159,7 +160,8 @@
 
     <script src="/assets/sortable.min.js?v=3"></script>
     <script src="/assets/app.js?v=4"></script>
-<button id="mobile-action-fab" class="mobile-action-fab" title="Aktionen"><i data-lucide="zap" style="width: 24px; height: 24px; margin: 0;"></i></button>
+<div id="row-actions-toggle" class="row-actions-handle" title="Zeilen-Aktionen"><i data-lucide="chevron-left"></i></div>
+<button id="bulk-actions-fab" class="mobile-bulk-fab" title="Stapelverarbeitung & Filter"><i data-lucide="layers" style="width: 24px; height: 24px; margin: 0;"></i></button>
 </body>
 
 </html>

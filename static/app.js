@@ -1007,21 +1007,53 @@ document.addEventListener('DOMContentLoaded', () => {
        setTimeout(checkForUpdates, 5000);
     }
 });
-// FAB Logic
+
+// UX Overhaul Logic
 document.addEventListener('DOMContentLoaded', () => {
-    const fab = document.getElementById('mobile-action-fab');
-    if (fab) {
-        fab.addEventListener('click', () => {
+    // 1. Settings Off-Canvas
+    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    const settingsDropdown = document.getElementById('settings-dropdown');
+    const settingsCloseBtn = document.getElementById('settings-close-btn');
+
+    if (settingsToggleBtn && settingsDropdown) {
+        // Remove old click listener by cloning (simplest way if it was inline or bound elsewhere)
+        const newToggle = settingsToggleBtn.cloneNode(true);
+        settingsToggleBtn.parentNode.replaceChild(newToggle, settingsToggleBtn);
+        
+        newToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsDropdown.classList.add('settings-open');
+        });
+    }
+    
+    if (settingsCloseBtn) {
+        settingsCloseBtn.addEventListener('click', () => {
+            settingsDropdown.classList.remove('settings-open');
+        });
+    }
+
+    // 2. Row Actions Handle
+    const rowActionsToggle = document.getElementById('row-actions-toggle');
+    if (rowActionsToggle) {
+        rowActionsToggle.addEventListener('click', () => {
             document.body.classList.toggle('show-mobile-actions');
             if(typeof lucide !== 'undefined') {
-                const icon = fab.querySelector('i');
+                const icon = rowActionsToggle.querySelector('i');
                 if (document.body.classList.contains('show-mobile-actions')) {
-                    icon.setAttribute('data-lucide', 'x');
+                    icon.setAttribute('data-lucide', 'chevron-right');
                 } else {
-                    icon.setAttribute('data-lucide', 'zap');
+                    icon.setAttribute('data-lucide', 'chevron-left');
                 }
                 lucide.createIcons();
             }
+        });
+    }
+
+    // 3. Bulk Actions FAB
+    const bulkActionsFab = document.getElementById('bulk-actions-fab');
+    if (bulkActionsFab) {
+        bulkActionsFab.addEventListener('click', () => {
+            document.body.classList.toggle('show-bulk-actions');
         });
     }
 });
