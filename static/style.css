@@ -649,7 +649,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 
 /* Row Actions Handle (Mobile) */
 .row-actions-handle {
-    display: flex !important;
+    display: none;
     position: fixed;
     right: 0;
     top: 50%;
@@ -670,7 +670,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 
 /* Bulk Actions FAB (Mobile) */
 .mobile-bulk-fab {
-    display: flex !important;
+    display: none;
     position: fixed;
     bottom: 30px;
     right: 30px;
@@ -692,6 +692,8 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 .mobile-bulk-fab:active { transform: scale(0.9) translateZ(0); }
 
 @media (max-width: 1000px) {
+    .row-actions-handle { display: flex; }
+    .mobile-bulk-fab { display: flex; }
     
     /* Ensure rows don't overflow the absolute slider */
     tbody tr {

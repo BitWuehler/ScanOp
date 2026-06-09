@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="shortcut icon" href="/assets/favicon.ico">
-    <link rel="stylesheet" href="/assets/style.css?v=8">
+    <link rel="stylesheet" href="/assets/style.css?v=9">
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -33,36 +33,6 @@
                     <span class="menu-text">Menü ▾</span>
                     <span class="menu-icon show-on-mobile" style="display:none;">☰</span>
                 </button>
-                <div id="settings-dropdown" class="settings-dropdown glass-container hidden">
-                    <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
-                        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="layout-dashboard"></i> Übersicht</a>
-                        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="refresh-cw"></i> Updates</a>
-                        <hr style="border-color: rgba(255,255,255,0.1); margin-top: 15px;">
-                    </div>
-                    <a href="{{ url_for('web_daily_report') }}"
-                        style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄
-                        Tagesbericht öffnen</a>
-                    <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="log-out"></i> Logout ({{ user }})</a>
-                    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <h3
-                        style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                        <i data-lucide="settings"></i> Einstellungen</h3>
-                    <label
-                        style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
-                        <input type="checkbox" id="global-filter-toggle">
-                        Übergreifender Filter
-                    </label>
-                    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <label for="settings_github_repo_url"
-                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
-                    <input type="text" id="settings_github_repo_url" value="https://github.com/BitWuehler/ScanOp"
-                        style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
-                    <label for="settings_github_version"
-                        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version
-                        (Tag/Branch):</label>
-                    <input type="text" id="settings_github_version" value="main"
-                        style="width: 100%; padding: 8px; font-size: 0.85rem;" />
-                </div>
             </div>
         </nav>
     </header>
@@ -161,6 +131,38 @@
     <script src="/assets/app.js?v=5"></script>
 <div id="row-actions-toggle" class="row-actions-handle" title="Zeilen-Aktionen"><i data-lucide="chevron-left"></i></div>
 <button id="bulk-actions-fab" class="mobile-bulk-fab" title="Stapelverarbeitung & Filter"><i data-lucide="layers" style="width: 24px; height: 24px; margin: 0;"></i></button>
+
+<div id="settings-dropdown" class="settings-dropdown glass-container hidden">
+    <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
+        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="layout-dashboard"></i> Übersicht</a>
+        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="refresh-cw"></i> Updates</a>
+        <hr style="border-color: rgba(255,255,255,0.1); margin-top: 15px;">
+    </div>
+    <a href="{{ url_for('web_daily_report') }}"
+        style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄
+        Tagesbericht öffnen</a>
+    <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="log-out"></i> Logout ({{ user }})</a>
+    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
+    <h3
+        style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+        <i data-lucide="settings"></i> Einstellungen</h3>
+    <label
+        style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
+        <input type="checkbox" id="global-filter-toggle">
+        Übergreifender Filter
+    </label>
+    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
+    <label for="settings_github_repo_url"
+        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">GitHub Repo URL:</label>
+    <input type="text" id="settings_github_repo_url" value="https://github.com/BitWuehler/ScanOp"
+        style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.85rem;" />
+    <label for="settings_github_version"
+        style="font-size: 0.85rem; margin-bottom: 5px; display: block;">Ziel-Version
+        (Tag/Branch):</label>
+    <input type="text" id="settings_github_version" value="main"
+        style="width: 100%; padding: 8px; font-size: 0.85rem;" />
+</div>
+
 </body>
 
 </html>
