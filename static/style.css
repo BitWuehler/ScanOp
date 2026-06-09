@@ -762,13 +762,13 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     }
     
     body.show-mobile-actions .actions-slider {
-        width: 150px;
+        width: var(--slider-width, 150px);
         padding: 0 10px;
         opacity: 1;
         pointer-events: auto;
     }
     body.show-mobile-actions .row-actions-handle {
-        transform: translate(-150px, -50%);
+        transform: translate(calc(var(--slider-width, 150px) * -1), -50%);
     }
     
     .row-actions-handle svg {
