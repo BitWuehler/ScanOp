@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="shortcut icon" href="/assets/favicon.ico">
-    <link rel="stylesheet" href="/assets/style.css?v=15">
+    <link rel="stylesheet" href="/assets/style.css?v=16">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -138,16 +138,18 @@
                         {% endif %}
                     </td>
                     <td class="actions-cell">
-                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
-                            data-scan-type="QuickScan" title="QuickScan starten">QS</button>
-                        <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
-                            data-scan-type="FullScan" title="FullScan starten">FS</button>
-                        {% if laptop.pending_command %}
-                        <button class="cancel-command-button" data-laptop-alias="{{ laptop.alias_name }}"
-                            title="Aktuellen Befehl abbrechen">Bef. X</button>
-                        {% endif %}
-                        <button class="delete-laptop-button" data-laptop-alias="{{ laptop.alias_name }}"
-                            title="Diesen Laptop löschen">Löschen</button>
+                        <div class="actions-slider">
+                            <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
+                                data-scan-type="QuickScan" title="QuickScan starten">QS</button>
+                            <button class="scan-button" data-laptop-alias="{{ laptop.alias_name }}"
+                                data-scan-type="FullScan" title="FullScan starten">FS</button>
+                            {% if laptop.pending_command %}
+                            <button class="cancel-command-button" data-laptop-alias="{{ laptop.alias_name }}"
+                                title="Aktuellen Befehl abbrechen">Bef. X</button>
+                            {% endif %}
+                            <button class="delete-laptop-button" data-laptop-alias="{{ laptop.alias_name }}"
+                                title="Diesen Laptop löschen">Löschen</button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

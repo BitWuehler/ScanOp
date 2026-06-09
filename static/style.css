@@ -723,8 +723,21 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     
     /* Slider mechanics */
     .actions-cell {
+        position: relative !important;
+        width: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        opacity: 1 !important;
+        pointer-events: none;
+        display: table-cell !important;
+        transform: none !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+    }
+    
+    .actions-slider {
         position: absolute;
-        right: -10px; /* -8px main padding + -2px border approx = screen edge */
+        right: -10px; /* Adjust based on padding to touch screen edge */
         top: 0;
         height: 100%;
         background: rgba(30, 30, 50, 0.95);
@@ -734,15 +747,15 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         display: flex;
         align-items: center;
         border-left: 1px solid rgba(255,255,255,0.1);
-        padding: 0 10px !important;
-        z-index: 10;
-        width: 150px !important;
+        padding: 0 10px;
+        z-index: 100;
+        width: 150px;
         justify-content: center;
         opacity: 0;
         pointer-events: none;
     }
     
-    body.show-mobile-actions .actions-cell {
+    body.show-mobile-actions .actions-slider {
         transform: translateX(0);
         opacity: 1;
         pointer-events: auto;
