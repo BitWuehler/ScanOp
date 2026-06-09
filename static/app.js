@@ -952,7 +952,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             const wasShimmering = existingCells[i].classList.contains('shimmer-cell');
                             const isShimmeringNow = newCells[i].classList.contains('shimmer-cell');
                             
+                            const oldPulsingBtn = existingCells[i].querySelector('.btn-pulsing');
+                            
                             existingCells[i].innerHTML = newCells[i].innerHTML;
+                            
+                            if (oldPulsingBtn) {
+                                const newBtn = existingCells[i].querySelector('.update-client-btn') || existingCells[i].querySelector('.scan-button');
+                                if (newBtn) {
+                                    const pendingCellText = newRow.querySelector('.pending-command-cell')?.textContent.trim();
+                                    const isRowPendingNow = newRow.querySelector('.shimmer-cell') !== null || (pendingCellText && pendingCellText !== 'Kein' && pendingCellText !== 'N/A' && pendingCellText !== '');
+                                    
+                                    if (isRowPendingNow) {
+                                        newBtn.classList.add('btn-pulsing');
+                                        newBtn.style.display = ''; // force visible
+                                    } else {
+                                        newBtn.classList.add('btn-pop-out');
+                                        newBtn.style.display = ''; 
+                                    }
+                                }
+                            }
                             
                             // Success animation if shimmer was removed
                             if (wasShimmering && !isShimmeringNow) {
