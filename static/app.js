@@ -181,12 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     showStatusMessage(`Erfolg: ${result.message}`, 'success');
                     
-                    if (isMobile) {
-                        this.classList.remove('btn-pulsing');
-                        this.classList.add('btn-pop-out');
-                        await new Promise(r => setTimeout(r, 400)); // wait for pop-out animation
-                    }
-                    
                     if (laptopAlias !== 'all') {
                         updatePendingCommandInUI(laptopAlias, "START_SCAN", scanType);
                     } else {
@@ -319,19 +313,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (response.ok) {
-                    if (isMobile) {
-                        this.classList.remove('btn-pulsing');
-                        this.classList.add('btn-pop-out');
-                        await new Promise(r => setTimeout(r, 400));
-                    }
-                    
                     // Add shimmer immediately
                     const row = document.getElementById(`laptop-row-${laptopAlias}`);
                     if (row) {
                         const vCell = row.querySelector('.version-cell');
                         if (vCell) vCell.classList.add('shimmer-cell');
                     }
-                    this.style.display = 'none'; // Hide button visually until reload or next poll
                     showStatusMessage(`Update ausgelöst für ${laptopAlias}. Client startet neu...`, 'info');
                 } else {
                     if (isMobile) this.classList.remove('btn-pulsing');
@@ -907,6 +894,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (data.last_update !== lastKnownUpdateTime) {
                     showStatusMessage('Neue Scan-Berichte verfügbar. Seite wird aktualisiert...', 'info');
                     if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
+                    
+                    // Ausblende-Animation für alle noch pulsierenden Buttons triggern
+                    document.querySelectorAll('.btn-pulsing').forEach(btn => {
+                        btn.classList.remove('btn-pulsing');
+                        btn.classList.add('btn-pop-out');
+                    });
+                    
                     setTimeout(() => window.location.reload(), 2000);
                     return; 
                 }
