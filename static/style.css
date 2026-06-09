@@ -583,12 +583,19 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 }
 /* Responsive Mobile Optimizations */
 .show-on-mobile { display: none; }
-.hide-on-mobile { display: table-cell; }
-h1 .hide-on-mobile, .nav-links.hide-on-mobile { display: inline-block; }
 
 .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
 
+[data-lucide] {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 5px;
+}
+
 @media (max-width: 1000px) {
+  .actions-slider-panel { display: none !important; }
   .hide-on-mobile { display: none !important; }
   .show-on-mobile { display: block !important; }
   .menu-text { display: none !important; }
@@ -613,4 +620,68 @@ h1 .hide-on-mobile, .nav-links.hide-on-mobile { display: inline-block; }
 
   .header-left h1 { font-size: 1.2rem; }
   .nav-dropdown-btn { padding: 8px 12px; }
+}
+
+/* FAB and Mobile Action Slider */
+.mobile-action-fab {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.3s;
+}
+.mobile-action-fab:active {
+    transform: scale(0.9);
+}
+
+@media (max-width: 1000px) {
+    .mobile-action-fab {
+        display: flex;
+    }
+    
+    /* Hide top menu and bulk actions by default on mobile, toggle via body class */
+    .header-left, .actions-bar {
+        display: none !important;
+    }
+    body.show-mobile-actions .header-left,
+    body.show-mobile-actions .actions-bar {
+        display: flex !important;
+    }
+
+    /* Actions slider in rows */
+    .actions-cell {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        background: rgba(20, 20, 40, 0.95);
+        backdrop-filter: blur(5px);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        display: flex;
+        align-items: center;
+        border-left: 1px solid rgba(255,255,255,0.1);
+        padding: 0 15px;
+        z-index: 10;
+    }
+    
+    body.show-mobile-actions .actions-cell {
+        transform: translateX(0);
+    }
+    
+    tbody tr {
+        position: relative;
+        overflow: hidden; /* Prevent action cell overflow from showing */
+    }
 }

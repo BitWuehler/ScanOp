@@ -11,6 +11,7 @@
     <link rel="shortcut icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/assets/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
@@ -25,8 +26,8 @@
         </div>
         <nav style="display: flex; align-items: center; gap: 20px;">
             <ul class="hide-on-mobile">
-                <li><a href="{{ url_for('web_laptops_overview') }}">Übersicht</a></li>
-                <li><a href="{{ url_for('web_client_updates') }}">Updates</a></li>
+                <li><a href="{{ url_for('web_laptops_overview') }}"><i data-lucide="layout-dashboard"></i> Übersicht</a></li>
+                <li><a href="{{ url_for('web_client_updates') }}"><i data-lucide="refresh-cw"></i> Updates</a></li>
             </ul>
             <div class="settings-menu-container">
                 <button id="settings-toggle-btn" class="nav-dropdown-btn" title="Menü">
@@ -35,14 +36,14 @@
                 </button>
                 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
                     <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
-                        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📊 Übersicht</a>
-                        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🔄 Updates</a>
+                        <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="layout-dashboard"></i> Übersicht</a>
+                        <a href="{{ url_for('web_client_updates') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="refresh-cw"></i> Updates</a>
                         <hr style="border-color: rgba(255,255,255,0.1); margin-top: 15px;">
                     </div>
-                    <a href="{{ url_for('web_daily_report') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">📄 Tagesbericht öffnen</a>
-                    <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);">🚪 Logout ({{ user }})</a>
+                    <a href="{{ url_for('web_daily_report') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="file-text"></i> Tagesbericht öffnen</a>
+                    <a href="{{ url_for('logout') }}" style="display: block; padding: 10px; color: #ffc107; text-decoration: none; border-radius: 6px; margin-bottom: 15px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="log-out"></i> Logout ({{ user }})</a>
                     <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">⚙️ Einstellungen</h3>
+                    <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;"><i data-lucide="settings"></i> Einstellungen</h3>
                     <label
                         style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
                         <input type="checkbox" id="global-filter-toggle">
@@ -88,10 +89,10 @@
             style="height: 50px; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; box-sizing: border-box;">
             <div class="filter-container" style="display: flex; gap: 15px; align-items: center;">
                 <div class="filter-btn-container" style="margin: 0;">
-                    <button class="filter-btn" data-state="0" data-filter="online">Online</button>
-                    <button class="filter-btn" data-state="0" data-filter="bedrohung">Bedrohung</button>
-                    <button class="filter-btn" data-state="0" data-filter="fehler">Fehler</button>
-                    <button class="filter-btn" data-state="0" data-filter="veraltet">Veraltet</button>
+                    <button class="filter-btn" data-state="0" data-filter="online"><i data-lucide="wifi"></i> Online</button>
+                    <button class="filter-btn" data-state="0" data-filter="bedrohung"><i data-lucide="shield-alert"></i> Bedrohung</button>
+                    <button class="filter-btn" data-state="0" data-filter="fehler"><i data-lucide="alert-triangle"></i> Fehler</button>
+                    <button class="filter-btn" data-state="0" data-filter="veraltet"><i data-lucide="clock"></i> Veraltet</button>
                 </div>
                 <input type="text" id="table-filter-input" placeholder="Tabelle filtern (Name, Status...)"
                     style="padding: 10px 15px; border-radius: 20px; width: 300px; margin: 0;">
@@ -195,6 +196,7 @@
 
     <script src="/assets/sortable.min.js?v=3"></script>
     <script src="/assets/app.js?v=3"></script>
+<button id="mobile-action-fab" class="mobile-action-fab" title="Aktionen"><i data-lucide="zap" style="width: 24px; height: 24px; margin: 0;"></i></button>
 </body>
 
 </html>

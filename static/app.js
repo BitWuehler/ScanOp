@@ -1,6 +1,8 @@
 // static/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+
     const statusMessageDiv = document.getElementById('status-message');
     
     let latestGithubVersion = null;
@@ -1003,5 +1005,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.querySelector('[data-sortable]') && !document.getElementById('updates-table')) {
        setTimeout(checkForUpdates, 5000);
+    }
+});
+// FAB Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const fab = document.getElementById('mobile-action-fab');
+    if (fab) {
+        fab.addEventListener('click', () => {
+            document.body.classList.toggle('show-mobile-actions');
+            if(typeof lucide !== 'undefined') {
+                const icon = fab.querySelector('i');
+                if (document.body.classList.contains('show-mobile-actions')) {
+                    icon.setAttribute('data-lucide', 'x');
+                } else {
+                    icon.setAttribute('data-lucide', 'zap');
+                }
+                lucide.createIcons();
+            }
+        });
     }
 });
