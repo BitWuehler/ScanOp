@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="shortcut icon" href="/assets/favicon.ico">
-    <link rel="stylesheet" href="/assets/style.css?v=19">
+    <link rel="stylesheet" href="/assets/style.css?v=20">
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -83,6 +83,7 @@
                     <th class="hide-on-mobile">Hostname</th>
                     <th>Online-Status</th>
                     <th style="width: 140px;">Client Version</th>
+                    <th class="actions-header">Aktionen</th>
                 </tr>
             </thead>
             <tbody>
@@ -100,11 +101,10 @@
                         <span class="show-on-mobile" style="display:none;">{{ item.short_status_text }}</span>
                     </td>
                     <td class="version-cell {% if laptop.pending_command == 'UPDATE_CLIENT' %}shimmer-cell{% endif %}" style="padding-right: 5px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span
-                                class="version-text"
-                                style="flex-grow: 1;">{{ laptop.client_version if laptop.client_version else 'N/A'
-                                }}</span>
+                        <span class="version-text">{{ laptop.client_version if laptop.client_version else 'N/A' }}</span>
+                    </td>
+                    <td class="actions-cell">
+                        <div class="actions-slider">
                             <button class="update-client-btn scan-button" data-alias="{{ laptop.alias_name }}" title="Sofort updaten" {% if laptop.pending_command == 'UPDATE_CLIENT' %}style="display:none;"{% endif %} style="display: inline-flex; align-items: center; justify-content: center;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
