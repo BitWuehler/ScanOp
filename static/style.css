@@ -715,48 +715,51 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     .glass-container { padding: 10px !important; }
     header { padding: 10px 10px !important; }
     
-    /* Ensure rows don't overflow the absolute slider */
-    tbody tr {
-        position: relative;
-        overflow: hidden;
+    .table-responsive {
+        margin-left: -10px;
+        margin-right: -10px;
+        width: calc(100% + 20px) !important;
+        border-radius: 0;
     }
     
-    /* Slider mechanics */
+    tbody tr {
+        position: relative;
+    }
+    
+    /* Sticky Animated Column */
     .actions-cell {
-        position: relative !important;
-        width: 0 !important;
+        position: sticky !important;
+        right: 0 !important;
         padding: 0 !important;
-        border: none !important;
-        opacity: 1 !important;
-        pointer-events: none;
-        display: table-cell !important;
-        transform: none !important;
         background: transparent !important;
         backdrop-filter: none !important;
+        border: none !important;
+        z-index: 10;
+        width: 0 !important;
     }
     
     .actions-slider {
-        position: absolute;
-        right: -10px; /* Adjust based on padding to touch screen edge */
-        top: 0;
+        width: 0;
         height: 100%;
+        overflow: hidden;
         background: rgba(30, 30, 50, 0.95);
         backdrop-filter: blur(5px);
-        transform: translateX(100%);
-        transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        transition: width 0.3s ease-in-out, padding 0.3s ease-in-out, opacity 0.3s ease-in-out;
         display: flex;
         align-items: center;
-        border-left: 1px solid rgba(255,255,255,0.1);
-        padding: 0 10px;
-        z-index: 100;
-        width: 150px;
         justify-content: center;
         opacity: 0;
         pointer-events: none;
+        border-left: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .actions-slider .scan-button, .actions-slider .delete-laptop-button, .actions-slider .cancel-command-button {
+        white-space: nowrap;
     }
     
     body.show-mobile-actions .actions-slider {
-        transform: translateX(0);
+        width: 150px;
+        padding: 0 10px;
         opacity: 1;
         pointer-events: auto;
     }
