@@ -695,6 +695,21 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     .row-actions-handle { display: flex; }
     .mobile-bulk-fab { display: flex; }
     
+    /* Reduce paddings to fit more content on screen without scrolling */
+    th, td {
+        padding: 6px 4px !important;
+        font-size: 0.85rem;
+    }
+    .checkbox-cell {
+        width: 30px !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+    
+    main { padding: 8px !important; }
+    .glass-container { padding: 10px !important; }
+    header { padding: 10px 10px !important; }
+    
     /* Ensure rows don't overflow the absolute slider */
     tbody tr {
         position: relative;
@@ -702,7 +717,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     }
     
     /* Slider mechanics */
-    .actions-cell, .version-cell {
+    .actions-cell {
         position: sticky;
         right: 0;
         top: 0;
@@ -722,8 +737,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         pointer-events: none;
     }
     
-    body.show-mobile-actions .actions-cell,
-    body.show-mobile-actions .version-cell {
+    body.show-mobile-actions .actions-cell {
         transform: translateX(0);
         opacity: 1;
         pointer-events: auto;
