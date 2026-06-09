@@ -739,6 +739,9 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     }
     
     .actions-slider {
+        position: absolute;
+        right: 0;
+        top: 0;
         width: 0;
         height: 100%;
         overflow: hidden;
@@ -764,13 +767,13 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         pointer-events: auto;
     }
     body.show-mobile-actions .row-actions-handle {
-        transform: translate(-170px, -50%);
+        transform: translate(-150px, -50%);
     }
     
-    .row-actions-handle i {
+    .row-actions-handle svg {
         transition: transform 0.3s ease;
     }
-    body.show-mobile-actions .row-actions-handle i {
+    body.show-mobile-actions .row-actions-handle svg {
         transform: rotate(180deg);
     }
 
