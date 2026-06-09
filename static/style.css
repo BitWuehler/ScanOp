@@ -754,6 +754,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         opacity: 0;
         pointer-events: none;
         border-left: 1px solid rgba(255,255,255,0.1);
+        box-sizing: border-box;
     }
     
     .actions-slider .scan-button, .actions-slider .delete-laptop-button, .actions-slider .cancel-command-button {
