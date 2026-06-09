@@ -473,20 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('scanop_scroll_pos', window.scrollY);
     });
 
-    // Settings Dropdown Logic
-    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
-    const settingsDropdown = document.getElementById('settings-dropdown');
-    if (settingsToggleBtn && settingsDropdown) {
-        settingsToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            settingsDropdown.classList.toggle('hidden');
-        });
-        document.addEventListener('click', (e) => {
-            if (!settingsDropdown.contains(e.target) && e.target !== settingsToggleBtn) {
-                settingsDropdown.classList.add('hidden');
-            }
-        });
-    }
+    // Remove old settings logic to prevent conflicts
 
     // Global Settings (Repo URL & Version)
     const repoInput = document.getElementById('settings_github_repo_url');
@@ -1016,11 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsCloseBtn = document.getElementById('settings-close-btn');
 
     if (settingsToggleBtn && settingsDropdown) {
-        // Remove old click listener by cloning (simplest way if it was inline or bound elsewhere)
-        const newToggle = settingsToggleBtn.cloneNode(true);
-        settingsToggleBtn.parentNode.replaceChild(newToggle, settingsToggleBtn);
-        
-        newToggle.addEventListener('click', (e) => {
+        settingsToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             settingsDropdown.classList.add('settings-open');
         });
@@ -1031,6 +1014,16 @@ document.addEventListener('DOMContentLoaded', () => {
             settingsDropdown.classList.remove('settings-open');
         });
     }
+
+    // Global click listener to close sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        const toggleBtn = document.getElementById('settings-toggle-btn');
+        if (settingsDropdown && toggleBtn) {
+            if (!settingsDropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
+                settingsDropdown.classList.remove('settings-open');
+            }
+        }
+    });
 
     // 2. Row Actions Handle
     const rowActionsToggle = document.getElementById('row-actions-toggle');
