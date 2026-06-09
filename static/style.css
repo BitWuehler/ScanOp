@@ -653,7 +653,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     position: fixed;
     right: 0;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(-50%) translateZ(0);
     width: 30px;
     height: 60px;
     background: #0d6efd;
@@ -665,6 +665,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     z-index: 1001;
     box-shadow: -2px 0 10px rgba(0,0,0,0.5);
     transition: transform 0.3s ease-in-out;
+    will-change: transform;
 }
 
 /* Bulk Actions FAB (Mobile) */
@@ -685,8 +686,10 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     justify-content: center;
     cursor: pointer;
     transition: transform 0.2s;
+    transform: translateZ(0);
+    will-change: transform;
 }
-.mobile-bulk-fab:active { transform: scale(0.9); }
+.mobile-bulk-fab:active { transform: scale(0.9) translateZ(0); }
 
 @media (max-width: 1000px) {
     .row-actions-handle { display: flex; }
