@@ -96,12 +96,23 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             else:
                 simplified_result_message = msg[:30] + ("..." if len(msg) > 30 else "")
                 
+        
+        has_error = False
+        has_threat = False
+        msg_lower = (laptop_instance.last_scan_result_message or "").lower()
+        if "fehler" in msg_lower:
+            has_error = True
+        if "fund!" in msg_lower or "siehe bericht" in msg_lower or "bedrohung" in msg_lower:
+            has_threat = True
+            
         laptops_with_status.append({
             "db_data": laptop_instance, 
             "scan_status": status_info,
             "is_online": is_online,
             "scan_hours": hours_rounded,
-            "simplified_result_message": simplified_result_message
+            "simplified_result_message": simplified_result_message,
+            "has_error": has_error,
+            "has_threat": has_threat
         })
     return templates.TemplateResponse("laptops_overview.html", {"request": request, "laptops_list": laptops_with_status, "title": "Laptop Übersicht", "user": user})
 

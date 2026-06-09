@@ -119,7 +119,7 @@
             <tbody>
                 {% for item in laptops_list %}
                 {% set laptop = item.db_data %}
-                <tr id="laptop-row-{{ laptop.alias_name }}" data-scan-hours="{{ item.scan_hours }}">
+                <tr id="laptop-row-{{ laptop.alias_name }}" data-scan-hours="{{ item.scan_hours }}" data-threat="{{ item.has_threat|lower }}" data-error="{{ item.has_error|lower }}">
                     <td style="text-align: center;">
                         <input type="checkbox" class="laptop-checkbox" data-alias="{{ laptop.alias_name }}"
                             data-version="{{ laptop.client_version or '0.0.0' }}">

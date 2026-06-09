@@ -570,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 'bedrohung' filter
                 if (filters['bedrohung']) {
-                    const hasThreat = text.includes('fund!') || text.includes('siehe bericht') || text.includes('bedrohung');
+                    const hasThreat = row.dataset.threat === 'true';
                     if (filters['bedrohung'] === '1' && !hasThreat) visible = false;
                     if (filters['bedrohung'] === '2' && hasThreat) visible = false;
                 }
@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 'fehler' filter
                 if (filters['fehler']) {
-                    const hasError = text.includes('fehler');
+                    const hasError = row.dataset.error === 'true';
                     if (filters['fehler'] === '1' && !hasError) visible = false;
                     if (filters['fehler'] === '2' && hasError) visible = false;
                 }
