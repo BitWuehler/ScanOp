@@ -1006,12 +1006,16 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             settingsDropdown.classList.add('settings-open');
+            const fab = document.getElementById('bulk-actions-fab');
+            if (fab) fab.style.display = 'none';
         });
     }
     
     if (settingsCloseBtn) {
         settingsCloseBtn.addEventListener('click', () => {
             settingsDropdown.classList.remove('settings-open');
+            const fab = document.getElementById('bulk-actions-fab');
+            if (fab) fab.style.display = '';
         });
     }
 
@@ -1021,6 +1025,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settingsDropdown && toggleBtn) {
             if (!settingsDropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
                 settingsDropdown.classList.remove('settings-open');
+                const fab = document.getElementById('bulk-actions-fab');
+                if (fab) fab.style.display = '';
+            }
+        }
+        
+        // Also close bulk actions menu when clicking outside
+        const actionsBar = document.querySelector('.actions-bar');
+        const bulkActionsFab = document.getElementById('bulk-actions-fab');
+        if (document.body.classList.contains('show-bulk-actions')) {
+            if (actionsBar && bulkActionsFab) {
+                if (!actionsBar.contains(e.target) && !bulkActionsFab.contains(e.target)) {
+                    document.body.classList.remove('show-bulk-actions');
+                }
             }
         }
     });

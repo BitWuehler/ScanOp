@@ -702,7 +702,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     }
     
     /* Slider mechanics */
-    .actions-cell {
+    .actions-cell, .version-cell {
         position: absolute;
         right: 0;
         top: 0;
@@ -720,7 +720,8 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         justify-content: center;
     }
     
-    body.show-mobile-actions .actions-cell {
+    body.show-mobile-actions .actions-cell,
+    body.show-mobile-actions .version-cell {
         transform: translateX(0);
     }
     body.show-mobile-actions .row-actions-handle {
