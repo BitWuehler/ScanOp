@@ -806,3 +806,32 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         transform: scale(0.5);
     }
 }
+
+/* Hide Delete Button Default */
+body.hide-delete-btn .delete-laptop-button {
+    display: none !important;
+}
+
+/* Button Animations */
+@keyframes pulse-action {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+.btn-pulsing {
+    animation: pulse-action 1.5s infinite;
+    pointer-events: none;
+    background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
+    color: white !important;
+}
+
+@keyframes pop-out {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0); opacity: 0; }
+}
+.btn-pop-out {
+    animation: pop-out 0.4s forwards;
+    pointer-events: none;
+}
+

@@ -106,8 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelButton.title = 'Aktuellen Befehl abbrechen';
                     cancelButton.textContent = 'Bef. X';
                     const deleteButton = actionsCell.querySelector('.delete-laptop-button');
-                    if (deleteButton) {
-                        actionsCell.insertBefore(cancelButton, deleteButton);
+                    const sliderContainer = actionsCell.querySelector('.actions-slider');
+                    if (deleteButton && deleteButton.parentNode) {
+                        deleteButton.parentNode.insertBefore(cancelButton, deleteButton);
+                    } else if (sliderContainer) {
+                        sliderContainer.appendChild(cancelButton);
                     } else {
                         actionsCell.appendChild(cancelButton);
                     }
@@ -159,7 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const laptopAlias = this.dataset.laptopAlias;
             const scanType = this.dataset.scanType;
             const apiUrl = `/api/v1/clientcommands/trigger_scan/${encodeURIComponent(laptopAlias)}`;
-            disableAllActionButtons(true);
+            const isMobile = window.matchMedia("(max-width: 768px)").matches;
+            
+            if (isMobile) {
+                this.classList.add('btn-pulsing');
+            } else {
+                disableAllActionButtons(true);
+            }
+            
             showStatusMessage(`Sende Befehl: ${scanType} für ${laptopAlias === 'all' ? 'ALLE Laptops' : laptopAlias}...`, 'info');
             try {
                 const response = await fetch(apiUrl, {
@@ -170,6 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await response.json();
                 if (response.ok) {
                     showStatusMessage(`Erfolg: ${result.message}`, 'success');
+                    
+                    if (isMobile) {
+                        this.classList.remove('btn-pulsing');
+                        this.classList.add('btn-pop-out');
+                        await new Promise(r => setTimeout(r, 400)); // wait for pop-out animation
+                    }
+                    
                     if (laptopAlias !== 'all') {
                         updatePendingCommandInUI(laptopAlias, "START_SCAN", scanType);
                     } else {
@@ -177,13 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => window.location.reload(), 1500);
                     }
                 } else {
+                    if (isMobile) this.classList.remove('btn-pulsing');
                     showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
+                if (isMobile) this.classList.remove('btn-pulsing');
                 console.error("Scan-Button Fehler:", error);
                 showStatusMessage('Netzwerkfehler oder Server nicht erreichbar.', 'error');
             } finally {
-                setTimeout(() => disableAllActionButtons(false), 1500);
+                if (!isMobile) {
+                    setTimeout(() => disableAllActionButtons(false), 1500);
+                }
             }
         });
     });
@@ -282,7 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const apiUrl = `/api/v1/clientcommands/trigger_update/${encodeURIComponent(laptopAlias)}`;
             const targetVersion = document.getElementById('settings_github_version')?.value || 'main';
             const repoUrl = document.getElementById('settings_github_repo')?.value || 'https://github.com/BitWuehler/ScanOp';
-            this.disabled = true;
+            const isMobile = window.matchMedia("(max-width: 768px)").matches;
+            
+            if (isMobile) {
+                this.classList.add('btn-pulsing');
+            } else {
+                this.disabled = true;
+            }
+            
             try {
                 const response = await fetch(apiUrl, { 
                     method: 'POST',
@@ -291,17 +319,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (response.ok) {
+                    if (isMobile) {
+                        this.classList.remove('btn-pulsing');
+                        this.classList.add('btn-pop-out');
+                        await new Promise(r => setTimeout(r, 400));
+                    }
+                    
                     // Add shimmer immediately
                     const row = document.getElementById(`laptop-row-${laptopAlias}`);
                     if (row) {
                         const vCell = row.querySelector('.version-cell');
                         if (vCell) vCell.classList.add('shimmer-cell');
-                        this.style.display = 'none';
                     }
+                    this.style.display = 'none'; // Hide button visually until reload or next poll
+                    showStatusMessage(`Update ausgelöst für ${laptopAlias}. Client startet neu...`, 'info');
                 } else {
-                    showStatusMessage(`Fehler (${response.status}) bei ${apiUrl}: ${result.detail || 'Unbekannter Fehler'}`, 'error');
+                    if (isMobile) this.classList.remove('btn-pulsing');
+                    this.disabled = false;
+                    showStatusMessage(`Fehler (${response.status}): ${result.detail || 'Unbekannter Fehler'}`, 'error');
                 }
             } catch (error) {
+                if (isMobile) this.classList.remove('btn-pulsing');
+                this.disabled = false;
                 console.error("Update-Client Fehler:", error);
                 showStatusMessage(`Netzwerkfehler bei ${apiUrl}: ${error.message}`, 'error');
             }
@@ -1064,6 +1103,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bulkActionsFab) {
         bulkActionsFab.addEventListener('click', () => {
             document.body.classList.toggle('show-bulk-actions');
+        });
+    }
+
+    // 4. Delete Button Visibility Setting
+    document.body.classList.add('hide-delete-btn');
+    const deleteBtnToggle = document.getElementById('settings_show_delete_btn');
+    let deleteBtnTimeout = null;
+    
+    if (deleteBtnToggle) {
+        deleteBtnToggle.checked = false;
+        deleteBtnToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.classList.remove('hide-delete-btn');
+                if (deleteBtnTimeout) clearTimeout(deleteBtnTimeout);
+                // 5 Minutes (300000 ms)
+                deleteBtnTimeout = setTimeout(() => {
+                    e.target.checked = false;
+                    document.body.classList.add('hide-delete-btn');
+                    showStatusMessage("Löschen-Button wurde automatisch wieder ausgeblendet.", "info");
+                }, 300000);
+            } else {
+                document.body.classList.add('hide-delete-btn');
+                if (deleteBtnTimeout) clearTimeout(deleteBtnTimeout);
+            }
         });
     }
 });
