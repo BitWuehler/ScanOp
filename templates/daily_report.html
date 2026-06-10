@@ -42,7 +42,7 @@
         </nav>
     </header>
     <main>
-        <div style="height: 80px; display: flex; flex-direction: column; justify-content: center;">
+        <div style="min-height: 80px; height: auto; display: flex; flex-direction: column; justify-content: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">Laptop-Status am {{ report_date_display }}</h2>
             <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Tagesbericht mit Scan-Ergebnissen
                 der Clients.</p>
@@ -68,8 +68,8 @@
             </form>
             <div class="hide-on-mobile" style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
             <div class="action-buttons-container" style="display: flex; gap: 10px;">
-                <a href="#" class="button-link" id="export-csv-btn">Als CSV exportieren</a>
-                <button id="export-pdf-btn">Als PDF exportieren</button>
+                <button class="button-secondary" id="export-csv-btn">Als CSV exportieren</button>
+                <button class="button-secondary" id="export-pdf-btn">Als PDF exportieren</button>
             </div>
         </div>
 
@@ -112,7 +112,7 @@
                     <td style="text-align: center;">
                         <input type="checkbox" class="report-row-checkbox" value="{{ laptop.id }}">
                     </td>
-                    <td class="index-cell" style="text-align: center; font-weight: bold; color: var(--text-muted);"></td>
+                    <td class="index-cell" style="text-align: center; font-weight: bold; color: var(--text-muted);">{{ loop.index }}</td>
                     <td>
                         {{ laptop.alias_name }}
                     </td>
@@ -160,7 +160,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="/assets/sortable.min.js?v=3"></script>
-    <script src="/assets/app.js?v=4"></script>
+    <button class="mobile-bulk-fab" onclick="document.querySelector('.actions-bar').classList.toggle('show')">
+        <i data-lucide="layers"></i>
+    </button>
+    <script src="/assets/app.js?v=25"></script>
 <div id="settings-dropdown" class="settings-dropdown glass-container hidden" style="width: 300px;">
     <div class="show-on-mobile" style="display:none; margin-bottom: 15px;">
         <a href="{{ url_for('web_laptops_overview') }}" style="display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; background: rgba(255,255,255,0.05); text-align: center; border: 1px solid var(--glass-border);"><i data-lucide="layout-dashboard"></i> Übersicht</a>

@@ -81,7 +81,7 @@
                     <th class="hide-on-mobile">Zuletzt gesehen (Lokal)</th>
                     <th class="hide-on-mobile">Letzter Scan (Lokal)</th>
                     <th class="hide-on-mobile">Scan Typ</th>
-                    <th>Scan Ergebnis</th>
+                    <th style="width: 1%; white-space: normal; text-align: center; line-height: 1.1; font-size: 0.85rem;">Scan<br>Ergebnis</th>
                     <th class="hide-on-mobile">Bedrohungen?</th>
                     <th class="hide-on-mobile">Akt. Befehl</th>
                     <th class="actions-header">Aktionen</th>
@@ -114,7 +114,7 @@
                         {% endif %}
                     </td>
                     <td class="hide-on-mobile">{{ laptop.last_scan_type if laptop.last_scan_type else 'N/A' }}</td>
-                    <td>
+                    <td style="text-align: center; white-space: nowrap;">
                         {% if laptop.last_scan_threats_found is true %}
                         <span style="color:#ff4444; font-weight:bold;">Fund!</span>
                         {% else %}
@@ -184,12 +184,12 @@
     <h3
         style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
         <i data-lucide="settings"></i> Einstellungen</h3>
-    <label
-        style="display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
-        <span>Veraltet ab (h)</span>
-        <input type="number" id="settings_outdated_hours" value="24" min="1" max="720"
-            style="width: 80px; padding: 5px; text-align: right;">
-    </label>
+        <label
+            style="display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
+            <span>Veraltet ab (h)</span>
+            <input type="number" id="settings_outdated_hours" value="12" min="1" max="720"
+                style="width: 80px; padding: 5px; text-align: right;">
+        </label>
     <label
         style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; margin-bottom: 15px; color: var(--text-main); font-weight: bold;">
         <input type="checkbox" id="settings_show_delete_btn">

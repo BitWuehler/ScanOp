@@ -470,12 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             doc.save(`scanop_tagesbericht_${reportDateStr.replace(/[\.\s:]/g, '-')}.pdf`);
 
-            // Versteckte Zeilen wieder einblenden und Nummern löschen
+            // Versteckte Zeilen wieder einblenden
             checkboxCellsToHide.forEach(el => el.style.display = '');
-            rows.forEach(row => {
-                const indexCell = row.querySelector('.index-cell');
-                if (indexCell) indexCell.innerText = '';
-            });
             rowsHidden.forEach(item => {
                 item.row.style.display = item.display;
             });
@@ -662,7 +658,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (globalFilterToggle) {
-        const isGlobalEnabled = localStorage.getItem('scanop_global_filter_enabled') === 'true';
+        const storedGlobal = localStorage.getItem('scanop_global_filter_enabled');
+        const isGlobalEnabled = storedGlobal !== null ? storedGlobal === 'true' : true;
         globalFilterToggle.checked = isGlobalEnabled;
 
         globalFilterToggle.addEventListener('change', (e) => {

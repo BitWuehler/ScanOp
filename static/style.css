@@ -70,6 +70,9 @@ nav ul li a {
     transition: color 0.3s ease;
     padding: 5px 10px;
     border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 nav ul li a:hover {
