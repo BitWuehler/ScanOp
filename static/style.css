@@ -622,8 +622,6 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     /* Tabellen Mindestbreite entfernen, damit sie sich anpasst */
     table { min-width: unset; width: 100%; }
     th, td { white-space: normal; } /* Erlaube Textumbruch falls nötig */
-    
-    .table-responsive { padding-right: 40px; box-sizing: border-box; } /* Platz für den blauen Slider-Handle */
 
   .header-left h1 { font-size: 1.2rem; }
   .nav-dropdown-btn { padding: 8px 12px; }
@@ -642,6 +640,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     border-left: 1px solid var(--glass-border);
     z-index: 2000;
     padding: 20px;
+    box-sizing: border-box;
     padding-top: 50px;
     transition: right 0.3s ease;
     overflow-y: auto;
@@ -722,10 +721,22 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     header { padding: 10px 10px !important; }
     
     .table-responsive {
-        margin-left: -10px;
-        margin-right: -10px;
-        width: calc(100% + 20px) !important;
+        margin-left: calc(-50vw + 50%) !important;
+        margin-right: calc(-50vw + 50%) !important;
+        width: 100vw !important;
+        padding-right: 0 !important;
         border-radius: 0;
+    }
+    
+    .table-responsive th:last-child,
+    .table-responsive td:last-child,
+    .table-responsive th:has(+ .actions-cell),
+    .table-responsive td:has(+ .actions-cell) {
+        padding-right: 40px !important;
+    }
+    
+    .table-responsive .actions-cell {
+        padding-right: 0 !important;
     }
     
     tbody tr {
