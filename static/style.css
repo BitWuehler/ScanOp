@@ -728,14 +728,15 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         border-radius: 8px !important;
     }
     
-    .table-responsive th:last-child,
-    .table-responsive td:last-child,
+    .table-responsive th:not(.actions-cell):last-child,
+    .table-responsive td:not(.actions-cell):last-child,
     .table-responsive th:has(+ .actions-cell),
     .table-responsive td:has(+ .actions-cell) {
         padding-right: 40px !important;
     }
     
-    .table-responsive .actions-cell {
+    .table-responsive td.actions-cell,
+    .table-responsive th.actions-cell {
         padding-right: 0 !important;
     }
     
