@@ -16,7 +16,7 @@
     --warning-text: #fbbf24;
 }
 
-body {
+html, body {
     font-family: 'Inter', sans-serif;
     margin: 0;
     min-height: 100vh;
@@ -29,6 +29,7 @@ body {
     color: var(--text-main);
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 header {
