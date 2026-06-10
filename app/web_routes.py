@@ -7,6 +7,7 @@ from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 import io
 import csv
+import re
 from typing import Union, Optional # KORREKTUR: Union und Optional importieren
 
 from app.database import get_db
@@ -104,7 +105,10 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
         simplified_result_message = "N/A"
         if laptop_instance.last_scan_result_message:
             # Clean up old pseudo-localization tokens from database
-            clean_msg = laptop_instance.last_scan_result_message.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+            clean_msg = laptop_instance.last_scan_result_message
+            clean_msg = re.sub(r'%[nиñńηйNИÑŃΗЙ]', '\n', clean_msg)
+            clean_msg = re.sub(r'%[tтŧťτTТŦŤΤ]', '    ', clean_msg)
+            clean_msg = re.sub(r'%[bьвβBЬВΒ]', '', clean_msg)
             laptop_instance.last_scan_result_message = clean_msg
             
             if "erfolgreich abgeschlossen" in clean_msg:
@@ -204,8 +208,13 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
                 threats_str = "Nein"
                 
             # Clean up old pseudo-localization tokens from database
-            threats_str = threats_str.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
-            scan_result = scan_result.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+            threats_str = re.sub(r'%[nиñńηйNИÑŃΗЙ]', '\n', threats_str)
+            threats_str = re.sub(r'%[tтŧťτTТŦŤΤ]', '    ', threats_str)
+            threats_str = re.sub(r'%[bьвβBЬВΒ]', '', threats_str)
+            
+            scan_result = re.sub(r'%[nиñńηйNИÑŃΗЙ]', '\n', scan_result)
+            scan_result = re.sub(r'%[tтŧťτTТŦŤΤ]', '    ', scan_result)
+            scan_result = re.sub(r'%[bьвβBЬВΒ]', '', scan_result)
 
         writer.writerow([laptop.alias_name, laptop.hostname, scan_time_str, scan_result, threats_str])
         
@@ -296,7 +305,9 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
                 
             # Clean up old pseudo-localization tokens from database
             if status_text:
-                status_text = status_text.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+                status_text = re.sub(r'%[nиñńηйNИÑŃΗЙ]', '\n', status_text)
+                status_text = re.sub(r'%[tтŧťτTТŦŤΤ]', '    ', status_text)
+                status_text = re.sub(r'%[bьвβBЬВΒ]', '', status_text)
                 
             # Truncate very long texts if they aren't threats or errors to save space
             if not is_real_threat and not is_error and len(status_text) > 100:
