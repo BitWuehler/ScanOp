@@ -77,7 +77,7 @@
                     <th style="width: 40px; text-align: center;"><input type="checkbox" id="master-checkbox"></th>
                     <th data-sorted-direction="ascending">Alias</th>
                     <th class="hide-on-mobile">Hostname</th>
-                    <th>Scan Status</th>
+                    <th style="width: 1%; white-space: normal; text-align: center; line-height: 1.1; font-size: 0.85rem;">Scan<br>Status</th>
                     <th class="hide-on-mobile">Zuletzt gesehen (Lokal)</th>
                     <th class="hide-on-mobile">Letzter Scan (Lokal)</th>
                     <th class="hide-on-mobile">Scan Typ</th>
@@ -101,7 +101,7 @@
                         {{ laptop.alias_name }}
                     </td>
                     <td class="hide-on-mobile">{{ laptop.hostname }}</td>
-                    <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.text }}" style="{{ item.scan_status.style }}">
+                    <td class="{{ item.scan_status.color_class }}" data-value="{{ item.scan_status.text }}" style="white-space: nowrap; text-align: center; {{ item.scan_status.style }}">
                         {{ item.scan_status.text }}
                     </td>
                     <td class="hide-on-mobile {{ 'status-green' if item.is_online else 'status-red' }}" data-value="{{ item.is_online }}">

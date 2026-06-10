@@ -282,12 +282,30 @@ async def web_client_updates(request: Request, db: Session = Depends(get_db), us
                     status_text = f"Offline ({mins//1440}d)"
                     short_status_text = f"{mins//1440}d"
                 
+        has_error = False
+        has_threat = False
+        msg_lower = (laptop.last_scan_result_message or "").lower()
+        if "fehler" in msg_lower:
+            has_error = True
+        if "fund!" in msg_lower or "siehe bericht" in msg_lower or "bedrohung" in msg_lower:
+            has_threat = True
+            
+        hours_rounded = 999999
+        if laptop.last_scan_time is not None:
+            last_scan_time_aware = laptop.last_scan_time.replace(tzinfo=timezone.utc)
+            time_since_last_scan = now_utc - last_scan_time_aware
+            hours_since = time_since_last_scan.total_seconds() / 3600.0
+            hours_rounded = round(hours_since)
+
         laptops_with_status.append({
             "db_data": laptop,
             "is_online": is_online,
             "status_text": status_text,
             "short_status_text": short_status_text,
-            "color_class": color_class
+            "color_class": color_class,
+            "scan_hours": hours_rounded,
+            "has_error": has_error,
+            "has_threat": has_threat
         })
         
     return templates.TemplateResponse("client_updates.html", {"request": request, "laptops_list": laptops_with_status, "title": "Client Updates", "user": user})
