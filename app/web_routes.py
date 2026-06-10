@@ -165,7 +165,7 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
             
             if historical_report.threats_found is True:
                 scan_result = "Fund!"
-                threats_str = "Ja"
+                threats_str = historical_report.threat_details if historical_report.threat_details else "Ja"
             else:
                 scan_result = historical_report.scan_result_message or "Keine Meldung"
                 if len(scan_result) > 50:
@@ -216,19 +216,25 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
             laptop.last_scan_type = historical_report.scan_type
             laptop.last_scan_result_message = historical_report.scan_result_message
             laptop.last_scan_threats_found = historical_report.threats_found
+            laptop.last_scan_threat_details = historical_report.threat_details
             laptop.last_scan_duration_minutes = None # We don't have duration in historical reports right now
         else:
             laptop.last_scan_time = None
             laptop.last_scan_type = None
             laptop.last_scan_result_message = None
             laptop.last_scan_threats_found = None
+            laptop.last_scan_threat_details = None
             laptop.last_scan_duration_minutes = None
 
         status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.replace(tzinfo=timezone.utc)
             if laptop.last_scan_threats_found is True:
-                status_text, color_class = "Bedrohung(en)!", "status-red"
+                if getattr(laptop, "last_scan_threat_details", None):
+                    status_text = laptop.last_scan_threat_details
+                else:
+                    status_text = "Bedrohung(en)!"
+                color_class = "status-red"
             elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
                 status_text, color_class = "OK (Scan heute)", "status-green"
             elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
