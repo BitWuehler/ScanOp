@@ -698,8 +698,8 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
 .mobile-bulk-fab:active { transform: scale(0.9) translateZ(0); }
 
 @media (max-width: 1000px) {
-    .row-actions-handle { display: flex; }
-    .mobile-bulk-fab { display: flex; }
+    .row-actions-handle { display: flex; right: 4px !important; }
+    .mobile-bulk-fab { display: flex; right: 4px !important; }
     
     /* Reduce paddings to fit more content on screen without scrolling */
     th, td {
@@ -721,9 +721,9 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     header { padding: 10px 10px !important; }
     
     .table-responsive {
-        margin-left: -4px !important;
-        margin-right: -4px !important;
-        width: calc(100% + 8px) !important;
+        margin-left: -11px !important;
+        margin-right: -11px !important;
+        width: calc(100% + 22px) !important;
         padding-right: 0 !important;
         border-radius: 8px !important;
     }
