@@ -163,7 +163,14 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
             scan_time_berlin = historical_report.client_scan_time.replace(tzinfo=timezone.utc).astimezone(berlin_tz)
             scan_time_str = scan_time_berlin.strftime('%d.%m.%Y %H:%M:%S')
             
-            if historical_report.threats_found is True:
+            is_real_threat = historical_report.threats_found
+            is_error = False
+            if historical_report.scan_result_message and ("Event 1002" in historical_report.scan_result_message or "FEHLER:" in historical_report.scan_result_message or "stopped" in historical_report.scan_result_message or "Fehler" in historical_report.scan_result_message):
+                if "Event 1002" in historical_report.scan_result_message:
+                    is_real_threat = False
+                is_error = True
+            
+            if is_real_threat is True:
                 scan_result = "Fund!"
                 if historical_report.threat_details:
                     threats_str = historical_report.threat_details
@@ -171,6 +178,9 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
                     threats_str = historical_report.scan_result_message
                 else:
                     threats_str = "Ja"
+            elif is_error:
+                scan_result = "Fehler"
+                threats_str = historical_report.scan_result_message or "Fehler aufgetreten"
             else:
                 scan_result = historical_report.scan_result_message or "Keine Meldung"
                 if len(scan_result) > 50:
@@ -234,7 +244,16 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
         status_text, color_class = "N/A", "status-white"
         if laptop.last_scan_time is not None:
             last_scan_time_aware = laptop.last_scan_time.replace(tzinfo=timezone.utc)
-            if laptop.last_scan_threats_found is True:
+            
+            # Retroactively fix old DB entries where Event 1002 was marked as a threat
+            is_real_threat = laptop.last_scan_threats_found
+            is_error = False
+            if laptop.last_scan_result_message and ("Event 1002" in laptop.last_scan_result_message or "FEHLER:" in laptop.last_scan_result_message or "stopped" in laptop.last_scan_result_message or "Fehler" in laptop.last_scan_result_message):
+                if "Event 1002" in laptop.last_scan_result_message:
+                    is_real_threat = False # 1002 is just a cancelled scan, not a threat
+                is_error = True
+
+            if is_real_threat is True:
                 if getattr(laptop, "last_scan_threat_details", None):
                     status_text = laptop.last_scan_threat_details
                 elif laptop.last_scan_result_message:
@@ -242,6 +261,9 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
                 else:
                     status_text = "Bedrohung(en)!"
                 color_class = "status-red"
+            elif is_error:
+                status_text = laptop.last_scan_result_message
+                color_class = "status-yellow"
             elif (now_utc.date() == last_scan_time_aware.date()) and (now_utc - last_scan_time_aware) <= timedelta(days=1):
                 status_text, color_class = "OK (Scan heute)", "status-green"
             elif (now_utc - last_scan_time_aware) <= timedelta(days=1):
