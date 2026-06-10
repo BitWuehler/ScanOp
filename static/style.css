@@ -721,10 +721,10 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     header { padding: 10px 10px !important; }
     
     .table-responsive {
-        margin-left: -15px !important;
-        margin-right: -15px !important;
-        padding-left: 11px !important;
-        padding-right: 11px !important;
+        margin-left: -8px !important;
+        margin-right: -8px !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
         width: auto !important;
         border-radius: 0 !important;
     }
@@ -767,9 +767,9 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     
     .actions-slider {
         position: absolute;
-        right: -11px !important;
+        right: -4px !important;
         top: 0;
-        width: calc(var(--slider-width, 150px) + 11px) !important;
+        width: calc(var(--slider-width, 150px) + 4px) !important;
         height: 100%;
         overflow: hidden;
         /* Performance Fix für Android Firefox: backdrop-filter entfernt, da es beim Scrollen extrem ruckelt */
@@ -779,7 +779,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        padding-right: 21px !important;
+        padding-right: 14px !important;
         gap: 8px;
         box-sizing: border-box;
         transition: clip-path 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out;
@@ -809,7 +809,7 @@ th[data-sorted="true"][data-sorted-direction="descending"]::after {
     }
     
     body.show-mobile-actions .row-actions-handle {
-        transform: translate(calc((var(--slider-width, 150px) + 11px) * -1), -50%) translateZ(0);
+        transform: translate(calc((var(--slider-width, 150px) + 4px) * -1), -50%) translateZ(0);
     }
     
     .row-actions-handle svg {
