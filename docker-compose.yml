@@ -12,6 +12,10 @@ services:
       # Verbindet den Ordner "data" auf dem Host mit dem Ordner "/app/data" im Container.
       # Dadurch wird die Datenbankdatei persistent gespeichert und überlebt Container-Neustarts.
       - ./data:/app/data
+      # Binde den lokalen Code ein, damit Änderungen sofort sichtbar werden:
+      - ./app:/app/app
+      - ./templates:/app/templates
+      - ./client:/app/client
     environment:
       # Setzt die Umgebungsvariablen für die Anwendung. 
       # Pydantic-Settings priorisiert diese über eine eventuelle .env-Datei.

@@ -165,7 +165,12 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
             
             if historical_report.threats_found is True:
                 scan_result = "Fund!"
-                threats_str = historical_report.threat_details if historical_report.threat_details else "Ja"
+                if historical_report.threat_details:
+                    threats_str = historical_report.threat_details
+                elif historical_report.scan_result_message:
+                    threats_str = historical_report.scan_result_message
+                else:
+                    threats_str = "Ja"
             else:
                 scan_result = historical_report.scan_result_message or "Keine Meldung"
                 if len(scan_result) > 50:
@@ -232,6 +237,8 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
             if laptop.last_scan_threats_found is True:
                 if getattr(laptop, "last_scan_threat_details", None):
                     status_text = laptop.last_scan_threat_details
+                elif laptop.last_scan_result_message:
+                    status_text = laptop.last_scan_result_message
                 else:
                     status_text = "Bedrohung(en)!"
                 color_class = "status-red"
