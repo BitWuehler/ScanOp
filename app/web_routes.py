@@ -65,8 +65,21 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             hours_since = time_since_last_scan.total_seconds() / 3600.0
             hours_rounded = round(hours_since)
             
-            if laptop_instance.last_scan_threats_found is True:
+            # Retroactively fix old DB entries where Event 1002 was marked as a threat
+            is_real_threat = laptop_instance.last_scan_threats_found
+            is_error = False
+            if laptop_instance.last_scan_result_message and ("Event 1002" in laptop_instance.last_scan_result_message or "FEHLER:" in laptop_instance.last_scan_result_message or "stopped" in laptop_instance.last_scan_result_message or "Fehler" in laptop_instance.last_scan_result_message):
+                if "Event 1002" in laptop_instance.last_scan_result_message:
+                    is_real_threat = False # 1002 is just a cancelled scan, not a threat
+                is_error = True
+                
+            laptop_instance.last_scan_threats_found = is_real_threat
+            laptop_instance.is_error = is_error
+
+            if is_real_threat is True:
                 status_info = {"text": "Bedrohung(en) gefunden!", "color_class": "status-red", "style": ""}
+            elif is_error:
+                status_info = {"text": "Fehler / Abbruch", "color_class": "status-yellow", "style": ""}
             else:
                 if hours_since <= 5:
                     hue = 120 # Green
@@ -90,11 +103,14 @@ async def web_laptops_overview(request: Request, db: Session = Depends(get_db), 
             
         simplified_result_message = "N/A"
         if laptop_instance.last_scan_result_message:
-            msg = laptop_instance.last_scan_result_message
-            if "erfolgreich abgeschlossen" in msg:
+            # Clean up old pseudo-localization tokens from database
+            clean_msg = laptop_instance.last_scan_result_message.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+            laptop_instance.last_scan_result_message = clean_msg
+            
+            if "erfolgreich abgeschlossen" in clean_msg:
                 simplified_result_message = "OK"
             else:
-                simplified_result_message = msg[:30] + ("..." if len(msg) > 30 else "")
+                simplified_result_message = clean_msg[:30] + ("..." if len(clean_msg) > 30 else "")
                 
         
         has_error = False
@@ -186,6 +202,10 @@ async def export_daily_report_csv(request: Request, report_date_str: Optional[st
                 if len(scan_result) > 50:
                     scan_result = scan_result[:50] + "..."
                 threats_str = "Nein"
+                
+            # Clean up old pseudo-localization tokens from database
+            threats_str = threats_str.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+            scan_result = scan_result.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
 
         writer.writerow([laptop.alias_name, laptop.hostname, scan_time_str, scan_result, threats_str])
         
@@ -253,6 +273,9 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
                     is_real_threat = False # 1002 is just a cancelled scan, not a threat
                 is_error = True
 
+            laptop.last_scan_threats_found = is_real_threat
+            laptop.is_error = is_error
+
             if is_real_threat is True:
                 if getattr(laptop, "last_scan_threat_details", None):
                     status_text = laptop.last_scan_threat_details
@@ -270,6 +293,14 @@ async def web_daily_report(request: Request, report_date_str: Optional[str] = No
                 status_text, color_class = "OK (Scan <24h)", "status-green"
             else:
                 status_text, color_class = "OK (Scan älter)", "status-yellow"
+                
+            # Clean up old pseudo-localization tokens from database
+            if status_text:
+                status_text = status_text.replace('%n', '\n').replace('%t', '    ').replace('%b', '')
+                
+            # Truncate very long texts if they aren't threats or errors to save space
+            if not is_real_threat and not is_error and len(status_text) > 100:
+                status_text = status_text[:100] + "..."
         else:
             status_text, color_class = "Kein Scan bisher", "status-white"
             

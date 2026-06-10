@@ -117,6 +117,8 @@
                     <td style="text-align: center; white-space: nowrap;">
                         {% if laptop.last_scan_threats_found is true %}
                         <span style="color:#ff4444; font-weight:bold;">Fund!</span>
+                        {% elif laptop.is_error %}
+                        <span style="color:#f59e0b; font-weight:bold;">Fehler / Abbruch</span>
                         {% else %}
                         <span title="{{ laptop.last_scan_result_message if laptop.last_scan_result_message else '' }}">{{ item.simplified_result_message }}</span>
                         {% endif %}

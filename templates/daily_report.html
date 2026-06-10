@@ -131,6 +131,8 @@
                     <td style="text-align: center;">
                         {% if laptop.last_scan_threats_found is true %}
                         <span style="color:#ff4444; font-weight:bold;">Fund!</span>
+                        {% elif laptop.is_error %}
+                        <span style="color:#f59e0b; font-weight:bold;">Fehler / Abbruch</span>
                         {% elif laptop.last_scan_result_message %}
                             {% if 'erfolgreich abgeschlossen' in laptop.last_scan_result_message %}
                             <span title="{{ laptop.last_scan_result_message }}">OK</span>
