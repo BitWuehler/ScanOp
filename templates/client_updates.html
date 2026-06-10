@@ -79,6 +79,11 @@
         <div id="status-message" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
 
         {% if laptops_list %}
+        <style>
+            @media (max-width: 1000px) {
+                :root { --slider-width: 60px; }
+            }
+        </style>
         <div class="table-responsive">
         <table id="updates-table" data-sortable>
             <thead>

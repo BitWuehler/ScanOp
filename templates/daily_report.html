@@ -102,7 +102,7 @@
                     <th class="hide-on-mobile">Hostname</th>
                     <th class="hide-on-mobile">Letzter Scan (Lokal)</th>
                     <th style="text-align: center;">Scan Ergebnis</th>
-                    <th>Status</th>
+                    <th style="text-align: center;">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -141,7 +141,7 @@
                         N/A
                         {% endif %}
                     </td>
-                    <td class="{{ item.status_color_class }}">
+                    <td class="{{ item.status_color_class }}" style="text-align: center;">
                         {{ item.status_text }}
                         {% if laptop.last_scan_threats_found is true %} (Bedrohungen!) {% endif %}
                     </td>
